@@ -103,6 +103,12 @@ class Monster extends GameObject {
     }
   }
 
+  setDirection(dx) {
+    if (dx !== 0) {
+      this.direction = dx;
+    }
+  }
+
   doMove(dx, dy) {
     assert(!this.waiting);
     const xold = this.x;
@@ -113,9 +119,7 @@ class Monster extends GameObject {
     this.basicMove(xnew, ynew);
     this.sleep(this.monsterType.baseDelay);
     const newVisible = world.isVisible(xnew, ynew);
-    if (dx !== 0) {
-      this.direction = dx;
-    }
+    this.setDirection(dx);
     if (oldVisible || newVisible) {
       const time = world.ui.now();
       return world.ui.animate(
@@ -133,6 +137,7 @@ class Monster extends GameObject {
     const oldVisible = world.isVisible(this.x, this.y);
     const newVisible = world.isVisible(victim.x, victim.y);
     const hp = 4 + randomInt(6);
+    this.setDirection(victim.x - this.x);
     this.sleep(this.monsterType.baseDelay);
     if (oldVisible || newVisible) {
       const time = world.ui.now();

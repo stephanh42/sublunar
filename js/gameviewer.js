@@ -144,6 +144,7 @@ class GameViewer extends CanvasViewer {
       console.error(err);
     } finally {
       this.blocked = false;
+      this.redraw();
     }
   }
 
@@ -276,6 +277,13 @@ class GameViewer extends CanvasViewer {
         animationObject.draw(ctx, mx, my, tileSize);
         ctx.globalAlpha = 1;
       }
+    }
+    if (!this.blocked) {
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.rect(-0.5, -0.5, tileSize+1, tileSize+1);
+      ctx.stroke();
     }
     ctx.restore();
   }

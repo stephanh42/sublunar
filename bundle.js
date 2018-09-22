@@ -658,7 +658,7 @@ function makeMonsterType(id, json) {
    id: id,
    baseDelay: 6,
    intelligence: 10,
-   hpRecovery: 24,
+   hpRecovery: 1/24,
    images: null
   };
   Object.assign(result, json);

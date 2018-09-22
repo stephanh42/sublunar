@@ -7,6 +7,7 @@ const Monster = require('./monster.js');
 const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
+const {makeSpan, removeAllChildren} = require('./htmlutil.js');
 
 const keyToDirection = {
   "h": [-1, 0],
@@ -46,20 +47,13 @@ class Message {
   }
 
   makeElement() {
-    const span = document.createElement('span');
-    span.className = 'message-span';
-    span.style.color = this.color;
-    span.appendChild(document.createTextNode(this.message));
+    const span = makeSpan('message-span', this.message, this.color);
     if (this.repeat > 1) {
-      const span2 = document.createElement('span');
-      span2.style.color = 'white';
-      span2.appendChild(document.createTextNode(` [${this.repeat}x]`));
+      const span2 = makeSpan(null, ` [${this.repeat}x]`, 'white');
       span.appendChild(span2);
     }
     if (this.hp !== 0) {
-      const span2 = document.createElement('span');
-      span2.style.color = 'yellow';
-      span2.appendChild(document.createTextNode(` (${this.hp} HP)`));
+      const span2 = makeSpan(null, ` (${this.hp} HP)`, 'yellow');
       span.appendChild(span2);
     }
     return span;
@@ -113,11 +107,8 @@ class UserInterface {
   }
 
   clearMessageArea() {
-     let last;
-     while ((last = this.messageArea.lastChild)) {
-       this.messageArea.removeChild(last);
-     }
-     this.lastMessage = null;
+    removeAllChildren(this.messageArea);
+    this.lastMessage = null;
   }
 }
 

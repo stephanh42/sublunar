@@ -1,1 +1,1766 @@
-(function(){function b(d,e,g){function a(j,i){if(!e[j]){if(!d[j]){var f="function"==typeof require&&require;if(!i&&f)return f(j,!0);if(h)return h(j,!0);var c=new Error("Cannot find module '"+j+"'");throw c.code="MODULE_NOT_FOUND",c}var k=e[j]={exports:{}};d[j][0].call(k.exports,function(b){var c=d[j][1][b];return a(c||b)},k,k.exports,b,d,e,g)}return e[j].exports}for(var h="function"==typeof require&&require,c=0;c<g.length;c++)a(g[c]);return a}return b})()({1:[function(a,b,c){"use strict";function d(a,b,c){return(1-a)*b+a*c}const e=a=>a;class f{constructor(a,b,c,d=1){this.time=a,this.x=b,this.y=c,this.opacity=d}interpolate(a,b,c){let e=(b-this.time)/(a.time-this.time);return e=c(Math.max(0,Math.min(1,e))),new f(b,d(e,this.x,a.x),d(e,this.y,a.y),d(e,this.opacity,a.opacity))}}c.lerp=d,c.bump=a=>4*a*(1-a),c.State=f,c.ObjectAnimation=class{constructor(a,b,c,d=e){this.gameObject=a,this.beginState=b,this.endState=c,this.sfunc=d}getState(a){return this.beginState.interpolate(this.endState,a,this.sfunc)}endTime(){return this.endState.time}}},{}],2:[function(a,b){"use strict";class c extends Error{}b.exports=function(a,b="Invalid assertion"){if(!a)throw new c(b)}},{}],3:[function(a,b){"use strict";b.exports=class{constructor(a){this.canvas=a,this.drawPromise=null,this.loadPromise=Promise.resolve().then(()=>this.load()),this.dpi=1}async load(){}redraw(){return null===this.drawPromise&&(this.drawPromise=this.loadPromise.then(()=>new Promise((a,b)=>window.requestAnimationFrame(c=>{this.drawPromise=null;try{this.basicDraw(c),a(c)}catch(a){b(a)}})))),this.drawPromise}async animateUntil(a){for(;;){const b=await this.redraw();if(b>=a)return b}}redrawOnWindowResize(){window.addEventListener("resize",()=>this.redraw(),!1)}basicDraw(a){performance.mark("draw-start");const b=this.canvas,c=0|b.clientWidth*this.dpi,d=0|b.clientHeight*this.dpi;(c!==b.width||d!==b.height)&&(b.width=c,b.height=d),this.draw(a),performance.mark("draw-end"),performance.measure("draw","draw-start","draw-end")}draw(){}getMousePos(a){const b=this.canvas,c=b.getBoundingClientRect();return[(a.clientX-c.left)/(c.right-c.left)*b.width,(a.clientY-c.top)/(c.bottom-c.top)*b.height]}}},{}],4:[function(a,b,c){"use strict";const d=["game","game-objects","terrain","remembered-terrain"];c.objectStores=d,c.openDatabase=function(){return new Promise((a,b)=>{const c=window.indexedDB.open("SublunarGameDB",1);c.onerror=()=>b(c.error),c.onsuccess=b=>a(b.target.result),c.onupgradeneeded=a=>{const b=a.target.result;for(const c of d)b.createObjectStore(c)}})}},{}],5:[function(a,b){"use strict";const c=a("./world.js"),d=a("./pqueue.js"),{getIdFromXY:e}=a("./indexutil.js"),{registerClass:f}=a("./pickle.js"),g=a("./assert.js");class h{constructor(){this.flags=0,this.x=0,this.y=0}getFlag(a){return(this.flags&a)===a}setFlag(a,b){this.flags=b?this.flags|a:this.flags&~a}get isPlaced(){return this.getFlag(1)}set isPlaced(a){this.setFlag(1,a)}pickleData(){const a={};return this.flags&&(a.flags=this.flags),a}unpickleData(a){this.flags=a.flags||0}markDirty(){this.isPlaced&&c.dirtyGameObjects.add(e(this.x,this.y))}basicMove(a,b){this.isPlaced&&(this.markDirty(),c.deleteGameObject(this.x,this.y,this)),this.x=a,this.y=b,this.isPlaced=!0,c.setGameObject(a,b,this),this.markDirty(),this===c.player&&c.updateVisible()}updateSeen(){}schedule(a,b){const e=c.scheduleOrder;c.scheduleOrder=e+1,d.insert(c.schedule,{time:c.time+a,order:e,object:this,action:b})}getReference(){if(this.isPlaced){const a=c.getGameObjects(this.x,this.y).indexOf(this);return g(0<=a),Int32Array.of(this.x,this.y,a)}return null}}h.prototype.passable=!0,h.prototype.isMonster=!1,f(h,10),b.exports=h},{"./assert.js":2,"./indexutil.js":9,"./pickle.js":15,"./pqueue.js":16,"./world.js":21}],6:[function(a,b){"use strict";var c=Math.abs,d=Math.floor,e=Math.round,f=Math.max,g=Math.min;const h=a("./canvasviewer.js"),i=a("./terrain.js"),j=a("./monster.js"),k=a("./database.js"),l=a("./world.js"),m=a("./newgame.js"),n={h:[-1,0],j:[0,1],k:[0,-1],l:[1,0],ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],Left:[-1,0],Right:[1,0],Up:[0,-1],Down:[0,1],b:[-1,1],n:[1,1],y:[-1,-1],u:[1,-1],1:[-1,-1],2:[0,-1],3:[1,-1],4:[-1,0],6:[1,0],7:[-1,1],8:[0,1],9:[1,1]};class o{constructor(a,b,c){this.message=a,this.color=b,this.repeat=1,this.hp=c}makeElement(){const a=document.createElement("span");if(a.className="message-span",a.style.color=this.color,a.appendChild(document.createTextNode(this.message)),1<this.repeat){const b=document.createElement("span");b.style.color="white",b.appendChild(document.createTextNode(` [${this.repeat}x]`)),a.appendChild(b)}if(0!==this.hp){const b=document.createElement("span");b.style.color="yellow",b.appendChild(document.createTextNode(` (${this.hp} HP)`)),a.appendChild(b)}return a}tryCombine(a){return!!a&&!(this.message!==a.message||this.color!==a.color)&&(this.repeat+=a.repeat,this.hp+=a.hp,!0)}}class p{constructor(a,b){this.gameViewer=a,this.messageArea=b,this.lastMessage=null}redraw(){return this.gameViewer.redraw()}async animate(a){const b=this.gameViewer;b.animation=a;const c=await b.animateUntil(a.endTime());return b.animation=null,c}now(){return performance.now()}message(a,b="white",c=0){const d=new o(a,b,c);d.tryCombine(this.lastMessage)&&this.messageArea.removeChild(this.messageArea.lastChild),this.messageArea.appendChild(d.makeElement()),this.lastMessage=d}clearMessageArea(){for(let a;a=this.messageArea.lastChild;)this.messageArea.removeChild(a);this.lastMessage=null}}b.exports=class extends h{constructor(a,b){super(a),this.blocked=!1,this.animation=null;const c=f(1,g(2,window.devicePixelRatio||1));this.dpi=c,this.tileSize=8*e(5*c),this.ui=l.ui=new p(this,b),document.addEventListener("keydown",a=>this.onkeydown(a),!1),a.addEventListener("click",a=>this.onclick(a),!1)}async handlePromise(a){this.blocked=!0;try{await a,await l.runSchedule(),performance.mark("saveGame-start"),await l.saveGame(),performance.mark("saveGame-end"),performance.measure("saveGame","saveGame-start","saveGame-end")}catch(a){console.error(a)}finally{this.blocked=!1,this.redraw()}}onkeydown(a){const b=n[a.key];if(b){const[a,c]=b;this.playerMove(a,c)}else"+"===a.key?(this.tileSize=g(96,this.tileSize+8),this.redraw()):"-"===a.key&&(this.tileSize=f(32,this.tileSize-8),this.redraw())}onclick(a){const[b,e]=this.getMousePos(a),f=this.tileSize,g=f+2,h=this.canvas,i=h.width-g>>1,j=h.height-g>>1,k=d((b-i)/g),l=d((e-j)/g);1>=c(k)&&1>=c(l)&&(0!==k||0!==l)&&this.playerMove(k,l)}playerMove(a,b){if(!this.blocked)return this.ui.clearMessageArea(),this.handlePromise(l.tryPlayerMove(a,b))}async load(){const a=k.openDatabase(),b=i.loadImages(),c=j.loadImages();l.database=await a;let d;(await l.tryLoadGame())?d="Game restored.":(d="Starting a new game.",m(),await l.saveGame({clearAll:!0})),await b,await c,this.ui.clearMessageArea(),this.ui.message(d,"yellow")}draw(a){var b=Math.ceil;const c=this.canvas,f=c.getContext("2d"),g=c.width,h=c.height;f.clearRect(0,0,g,h);const i=l.player;if(!i||!i.isPlaced)return;const j=this.animation,k=i.x,m=i.y,n=this.tileSize,o=n+2;let p=g-o>>1,q=h-o>>1;const r=j&&j.gameObject;if(r===i){const b=j.getState(a);p-=e((b.x-k)*o),q-=e((b.y-m)*o)}f.save(),f.translate(p,q),f.fillStyle="rgba(0, 0, 0, 0.5)";for(let c=d(-q/o);c<b((h-q)/o);c++)for(let a=d(-p/o);a<b((g-p)/o);a++){const b=a+k,d=c+m,e=l.isVisible(b,d);let g=!1;const h=l.getRememberedTerrain(b,d),i=h.images;if(i&&(f.drawImage(i.get(n),a*o,c*o),g=!0),e)for(const e of l.getGameObjects(b,d))e!==r&&e.draw(f,a*o,c*o,n);!e&&g&&f.fillRect(a*o,c*o,n,n)}if(r){const b=j.getState(a),c=e((b.x-k)*o),d=e((b.y-m)*o),g=b.opacity;1===g?r.draw(f,c,d,n):0<g&&(f.globalAlpha=g,r.draw(f,c,d,n),f.globalAlpha=1)}this.blocked||(f.strokeStyle="#FFFFFF",f.setLineDash([4,4]),f.beginPath(),f.rect(-.5,-.5,n+1,n+1),f.stroke()),f.restore()}}},{"./canvasviewer.js":3,"./database.js":4,"./monster.js":10,"./newgame.js":12,"./terrain.js":18,"./world.js":21}],7:[function(a,b,c){"use strict";function d(a){return new Promise((b,c)=>{const d=new Image;d.onload=()=>b(d),d.onerror=()=>c(new Error(`Cannot load image: ${a}`)),d.src=a})}function e(a,b){const c=document.createElement("canvas");return c.width=a,c.height=b,c}function f(a,b,c){if(b===c)return a;const d=e(c,c),f=d.getContext("2d"),g=c/b;return f.scale(g,g),f.drawImage(a,0,0),d}class g{constructor(a,b){this.im1=a,this.im2=b,this.cachedImage=null,this.cachedImageSize=-1}getUncached(a){return a<=this.im1.width?f(this.im1,this.im1.width,a):f(this.im2,this.im2.width,a)}get(a){return this.cachedImageSize!==a&&(this.cachedImage=this.getUncached(a),this.cachedImageSize=a),this.cachedImage}}c.loadImage=d,c.loadImageSizes=async function(a){const b=d(a+".png"),c=d(a+"@2.png");return new g((await b),(await c))}},{}],8:[function(a){"use strict";const b=a("./gameviewer.js"),c=document.getElementById("theCanvas"),d=document.getElementById("messageArea"),e=new b(c,d);e.redrawOnWindowResize(),e.redraw().then(console.log,console.error)},{"./gameviewer.js":6}],9:[function(a,b,c){"use strict";c.getIdFromXY=(a,b)=>a<<16|b&65535,c.getXFromId=a=>a>>16,c.getYFromId=a=>a<<16>>16},{}],10:[function(a,b){"use strict";function c(a,b,c,d,e){1===e?a.drawImage(b,c,d):(a.save(),a.translate(c+b.width,d),a.scale(-1,1),a.drawImage(b,0,0),a.restore())}const{loadImageSizes:d}=a("./imgutil.js"),{awaitPromises:e}=a("./terrain.js"),{registerClass:f}=a("./pickle.js"),{randomInt:g}=a("./randutil.js"),h=a("./game-object.js"),i=a("./world.js"),j=a("./animation.js"),k=a("./path-finder.js"),{toTitleCase:l}=a("./textutil.js"),m=a("./assert.js"),n={},o=[],p=Promise.resolve();class q{constructor(a,b){this.id=a,this.name=b.name,this.imageName=b.image||b.name,this.baseDelay=b.baseDelay||6,this.intelligence=b.intelligence||10,this.images=null}}for(const c of a("./monstertype.js")){const a=new q(o.length,c);o.push(a),n[a.name]=a}class r extends k{constructor(a,b,c,d,e){super(a,b,c,d),this.monster=e}isPassable(a,b){return this.monster.isPassable(a,b)}}class s extends h{constructor(a){super(),this.monsterType=a,this.direction=2*g(2)-1}get waiting(){return this.getFlag(2)}set waiting(a){this.setFlag(2,a)}pickleData(){const a=super.pickleData();return a.mt=this.monsterType.id,a.dir=this.direction,a}unpickleData(a){super.unpickleData(a),this.monsterType=o[a.mt],this.direction=a.dir}theName(){const a=this.monsterType.name;return this.isPlayer()?"your "+a:"the "+a}draw(a,b,d,e){const f=this.monsterType.images.get(e);c(a,f,b,d,this.direction)}sleep(a){this.waiting=!0,this.schedule(a,"wakeUp")}updateSeen(){this.waiting||this.isPlayer()||this.sleep(0)}setDirection(a){0!==a&&(this.direction=a)}doMove(a,b){m(!this.waiting);const c=this.x,d=this.y,e=c+a,f=d+b,g=i.isVisible(c,d);this.basicMove(e,f),this.sleep(this.monsterType.baseDelay);const h=i.isVisible(e,f);if(this.setDirection(a),g||h){const a=i.ui.now();return i.ui.animate(new j.ObjectAnimation(this,new j.State(a,c,d,0|g),new j.State(a+100,e,f,0|h)))}return p}doAttack(a){m(!this.waiting);const b=i.isVisible(this.x,this.y),c=i.isVisible(a.x,a.y),d=4+g(6);if(this.setDirection(a.x-this.x),this.sleep(this.monsterType.baseDelay),b||c){const e=i.ui.now();return i.ui.message(`${l(this.theName())} attacks ${a.theName()}.`,this.isPlayer()?"chartreuse":"red",d),i.ui.animate(new j.ObjectAnimation(this,new j.State(e,this.x,this.y,0|b),new j.State(e+100,a.x,a.y,0|c),j.bump))}return p}isPlayer(){return this===i.player}isPassable(a,b){return i.isPassable(a,b)}target(){const a=i.player;return a.isPlaced?a:null}async wakeUp(){if(this.waiting=!1,!this.isPlayer()){const a=this.target();if(a){const b=new r(this.x,this.y,a.x,a.y,this);b.runN(this.monsterType.intelligence);const c=b.getPath();if(2<=c.length){const[b,d]=c[1];if(this.isPassable(b,d))return this.doMove(b-this.x,d-this.y);if(i.getGameObjects(b,d).includes(a))return this.doAttack(a)}}}}static loadImages(){const a=[];for(const b of o)b.imageName&&a.push(d("img/"+b.imageName).then(a=>{b.images=a}));return e(a)}}s.monsterTypes=n,s.monsterList=o,s.prototype.passable=!1,s.prototype.isMonster=!0,f(s,20),b.exports=s},{"./animation.js":1,"./assert.js":2,"./game-object.js":5,"./imgutil.js":7,"./monstertype.js":11,"./path-finder.js":13,"./pickle.js":15,"./randutil.js":17,"./terrain.js":18,"./textutil.js":20,"./world.js":21}],11:[function(a,b){"use strict";b.exports=[{name:"submarine"},{name:"squid",baseDelay:12}]},{}],12:[function(a,b){"use strict";function c(a){let b=0,c=0;for(let h=0;h<a;h++)for(0===c?(f.setTerrain(b,0,d.wave),f.setTerrain(b,-1,d.air)):(f.setTerrain(b,c,d.water),f.isPassable(b,c)&&.01>Math.random()&&new e(e.monsterTypes.squid).basicMove(b,c));;){const[a,d]=g(b,c);if(0<=d&&10>d){b=a,c=d;break}}}const{terrainTypes:d}=a("./terrain.js"),e=a("./monster.js"),f=a("./world.js"),{randomStep:g}=a("./randutil.js");b.exports=function(){f.reset(),c(1e3);const a=new e(e.monsterTypes.submarine);return f.player=a,a.basicMove(0,0),f}},{"./monster.js":10,"./randutil.js":17,"./terrain.js":18,"./world.js":21}],13:[function(a,b){"use strict";var c=Math.abs;const d=a("./pqueue.js"),{getIdFromXY:e}=a("./indexutil.js");class f{constructor(a,b,c,d,e,f){this.time=a+b,this.cost=b,this.order=c,this.x=d,this.y=e,this.previous=f}}b.exports=class{constructor(a,b,c,d){this.incomplete=!0,this.found=!1,this.currentNode=null,this.x1=c,this.y1=d,this.closedSet=new Set,this.openSet=[],this.addOpenSet(0,a,b,null)}cost(){return 1}isPassable(){return!0}isPassableOrDestination(a,b){return a===this.x1&&b===this.y1||this.isPassable(a,b)}addOpenSet(a,b,e,g=null){const h=b-this.x1,i=e-this.y1,j=Math.max(c(h),c(i));d.insert(this.openSet,new f(j,a,h*h+i*i,b,e,g))}runStep(){if(0===this.openSet.length)return this.incomplete=!1,void(this.found||(this.currentNode=null));const a=d.remove(this.openSet),b=a.x,c=a.y,f=e(b,c);if(!this.closedSet.has(f)){if(this.currentNode=a,b===this.x1&&c===this.y1)return this.openSet=[],this.incomplete=!1,void(this.found=!0);this.closedSet.add(f);for(let d=-1;1>=d;d++)for(let f=-1;1>=f;f++){if(0==d&&0==f)continue;const g=b+d,h=c+f,i=e(g,h);if(this.closedSet.has(i)||!this.isPassableOrDestination(g,h))continue;const j=a.cost+this.cost(g,h);this.addOpenSet(j,g,h,a)}}}run(){for(;this.incomplete;)this.runStep()}runN(a){for(;this.incomplete&&0<a;)this.runStep(),a--}getPath(){const a=[];for(let b=this.currentNode;b;)a.push([b.x,b.y]),b=b.previous;return a.reverse(),a}}},{"./indexutil.js":9,"./pqueue.js":16}],14:[function(a,b,c){"use strict";function d(a,b,c,d){const e=b-d;return c*(b/e)-a*(d/e)}class e{constructor(c,a){this.a=c,this.b=a}atPoint(a,b){return this.a*a+this.b-b}zeroCrossing(a,b,c){return new e(d(this.a,a,b.a,c),d(this.b,a,b.b,c))}}class f{constructor(a){this.rays=a}isEmpty(){return 0===this.rays.length}splitPoint(a,b){const c=[],d=[],e=[];let g=!1,h=!1,i=null,j=0;3<=this.rays.length&&(i=this.rays[this.rays.length-1],j=i.atPoint(a,b));for(const f of this.rays){const k=f.atPoint(a,b);if(i&&(0>j&&0<k||0<j&&0>k)){const a=i.zeroCrossing(j,f,k);c.push(a),d.push(a),e.push(a)}0>k?(c.push(f),g=!0):0<k?(e.push(f),h=!0):(c.push(f),d.push(f),e.push(f)),i=f,j=k}return{negative:new f(g?c:[]),zero:new f(d),positive:new f(h?e:[])}}}const g=new f([new e(0,.5),new e(0,-.5),new e(1,-1),new e(1,1)],!0);class h{constructor(a,b,c){this.x=a,this.y=b,this.distance=Math.hypot(a,b),this._beam=c,this._children=null}_addChild(a,b,c){c.isEmpty()||this._children.push(new h(this.x+a,this.y+b,c))}children(){if(!this._children){this._children=[];const a=this.x,b=this.y,c=this._beam.splitPoint(a+.5,b+.5);this._addChild(0,1,c.positive.splitPoint(a-.5,b+.5).negative),this._addChild(1,1,c.zero),this._addChild(1,0,c.negative.splitPoint(a+.5,b-.5).positive)}return this._children}}const i=new h(0,0,g);c.fovTree=i},{}],15:[function(a,b,c){"use strict";const d=a("./assert.js"),e=Symbol(),f=new Map;c.registerClass=function(a,b){d(f.get(b)===void 0,"Class ID already in use");const c=a.prototype;d(c.pickleData,"Class misses pickleData method"),d(c.unpickleData,"Class misses unpickleData method"),f.set(b,a),c[e]=b},c.pickle=function(a){const b=a.pickleData();return b["class"]=a[e],b},c.unpickle=function(a){const b=f.get(a["class"]),c=new b;return c.unpickleData(a),c}},{"./assert.js":2}],16:[function(a,b,c){"use strict";function d(a,b,c){const d=a[b];a[b]=a[c],a[c]=d}function e(a,b){const c=a.time,d=b.time;return c<d||c===d&&a.order<b.order}function f(a,b){let c=a.length;for(a.push(b);0<c;){const f=c-1>>1,g=a[f];if(e(b,g))d(a,c,f),c=f;else break}}function g(a){if(0===a.length)return;if(1===a.length)return a.pop();const b=a[0];a[0]=a.pop();let c=0;for(const b=a[c];;){const f=2*c+1,g=2*c+2;if(f>=a.length)break;else if(g>=a.length){e(a[f],b)&&d(a,c,f);break}else{const h=a[f],i=a[g];if(!e(h,b)&&!e(i,b))break;else e(h,i)?(d(a,c,f),c=f):(d(a,c,g),c=g)}}return b}c.insert=f,c.remove=g,c.test=function(a=10){const b=[],c=[];for(let d=0;d<a;d++){const a={time:Math.random(),order:d};f(c,a),b.push(a)}const d=[];for(;0<c.length;)d.push(g(c));return[b,d]}},{}],17:[function(a,b,c){"use strict";function d(a){return 0|Math.random()*a}c.randomInt=d,c.randomStep=function(a=0,b=0){switch(d(4)){case 0:a++;break;case 1:b++;break;case 2:a--;break;case 3:b--;}return[a,b]},c.randomRange=function(a,b){const c=b-a,e=c>>1;return a+d(e+1)+d(c-e+1)}},{}],18:[function(a,b,c){"use strict";async function d(a){for(const b of a)await b}const{loadImageSizes:e}=a("./imgutil.js");class f{constructor(a,b){this.id=a,this.name=b.name,this.transparent=b.transparent,this.passable=b.passable,this.imageName=b.image,this.images=null}}const g={},h=[];for(const d of a("./terraintype.js")){const a=new f(h.length,d);h.push(a),g[a.name]=a}c.terrainTypes=g,c.terrainList=h,c.loadImages=function(){const a=[];for(const b of h)b.imageName&&a.push(e("img/"+b.imageName).then(a=>{b.images=a}));return d(a)},c.awaitPromises=d},{"./imgutil.js":7,"./terraintype.js":19}],19:[function(a,b){"use strict";b.exports=[{name:"unseen",passable:!1,transparent:!1},{name:"wall",image:"wall",passable:!1,transparent:!1},{name:"water",image:"water",passable:!0,transparent:!0},{name:"wave",image:"wave",passable:!0,transparent:!0},{name:"air",passable:!1,transparent:!0}]},{}],20:[function(a,b,c){"use strict";c.toTitleCase=function(a){return""===a?a:a[0].toUpperCase()+a.slice(1)}},{}],21:[function(a,b){"use strict";function c(a,b){return(15&b)<<4|15&a}function d(a){return a?a.getReference():null}function e(a){return a=Object.assign({},a),a.object=d(a.object),a}function f(a,b,c){return c=o(c),c.x=a,c.y=b,c}const g=a("./permissive-fov.js"),h=g.fovTree.children(),i=a("./pqueue.js"),j=a("./database.js"),{getIdFromXY:k,getXFromId:l,getYFromId:m}=a("./indexutil.js"),{pickle:n,unpickle:o}=a("./pickle.js"),p=a("./assert.js"),{terrainTypes:q,terrainList:r}=a("./terrain.js");class s{constructor(a){this.defaultTerrain=a,this.terrainMap=new Map,this.dirty=new Set}get(a,b){const d=k(a,b),e=this.terrainMap.get(d);return e?r[e[c(a,b)]]:this.defaultTerrain}set(a,b,d){const e=k(a,b);this.dirty.add(e);let f=this.terrainMap.get(e);f||(f=new Uint8Array(256),f.fill(this.defaultTerrain.id),this.terrainMap.set(e,f)),f[c(a,b)]=d.id}markNonDirty(){this.dirty.clear()}saveDirty(a){for(const b of this.dirty)a.put(this.terrainMap.get(b),b)}load(a){a.openCursor().onsuccess=a=>{const b=a.target.result;b&&(this.terrainMap.set(b.key,b.value),b.continue())}}}const t=Promise.resolve();class u{redraw(){return t}animate(){return t}now(){return 0}}const v=[],w=2;b.exports=new class{constructor(){this.terrainGrid=null,this.rememberedTerrainGrid=null,this.gameObjects=null,this.dirtyGameObjects=null,this.player=null,this.visible=null,this.time=0,this.scheduleOrder=0,this.schedule=[],this.ui=new u,this.database=null}reset(){this.terrainGrid=new s(q.wall),this.rememberedTerrainGrid=new s(q.unseen),this.gameObjects=new Map,this.dirtyGameObjects=new Set,this.visible=new Set,this.time=0,this.scheduleOrder=0,this.schedule=[],this.player=null}getTerrain(a,b){return this.terrainGrid.get(a,b)}setTerrain(a,b,c){return this.terrainGrid.set(a,b,c)}getRememberedTerrain(a,b){return this.rememberedTerrainGrid.get(a,b)}updateSeen(a,b){this.rememberedTerrainGrid.set(a,b,this.terrainGrid.get(a,b));for(const c of this.getGameObjects(a,b))c.updateSeen()}updateVisible(){function a(c,h){for(const i of c){if(i.distance>f)continue;let c=i.x,j=i.y;if(1&h&&(c=-c),2&h&&(j=-j),4&h){const a=c;c=j,j=a}c+=d,j+=e,b.add(k(c,j)),g.updateSeen(c,j),g.getTerrain(c,j).transparent&&a(i.children(),h)}}const b=new Set;this.visible=b;const c=this.player;if(!c)return;const d=c.x,e=c.y,f=7,g=this;b.add(k(d,e)),g.updateSeen(d,e);for(let b=0;8>b;b++)a(h,b)}isVisible(a,b){return this.visible.has(k(a,b))}setGameObject(a,b,c){const d=k(a,b),e=this.gameObjects.get(d);e?e.push(c):this.gameObjects.set(d,[c])}deleteGameObject(a,b,c){const d=k(a,b),e=this.gameObjects.get(d);if(1===e.length)p(e[0]===c),this.gameObjects.delete(d);else{const a=e.indexOf(c);p(0<=a),e.splice(a,1)}}getGameObjects(a,b){return this.gameObjects.get(k(a,b))||v}getMonster(a,b){for(const c of this.getGameObjects(a,b))if(c.isMonster)return c}isPassable(a,b){if(!this.getTerrain(a,b).passable)return!1;for(const c of this.getGameObjects(a,b))if(!c.passable)return!1;return!0}tryPlayerMove(a,b){const c=this.player;if(!c)return t;const d=a+c.x,e=b+c.y;if(this.isPassable(d,e))return c.doMove(a,b);else{const a=this.getMonster(d,e);return a?c.doAttack(a):t}}async runSchedule(){const a=this.player,b=this.schedule;for(;a.waiting;){const a=i.remove(b);p(a),this.time=a.time;const c=a.object;c&&c.isPlaced&&(await c[a.action].call(c))}}resolveReference(a){return a?this.getGameObjects(a[0],a[1])[a[2]]:null}unpickleAction(a){return a=Object.assign({},a),a.object=this.resolveReference(a.object),a}getGlobalData(){return{version:w,visible:this.visible,time:this.time,scheduleOrder:this.scheduleOrder,schedule:this.schedule.map(e),player:d(this.player)}}setGlobalData(a){this.visible=a.visible,this.time=a.time,this.scheduleOrder=a.scheduleOrder,this.schedule=a.schedule.map(a=>this.unpickleAction(a)),this.player=this.resolveReference(a.player)}saveGame({clearAll:a=!1}={}){return new Promise((b,c)=>{const d=this.database.transaction(j.objectStores,"readwrite");if(d.onerror=()=>c(d.error),d.onabort=()=>c(new Error("Transaction aborted")),d.oncomplete=()=>{this.markNonDirty(),b()},a)for(const a of j.objectStores)d.objectStore(a).clear();d.objectStore("game").put(this.getGlobalData(),1);const e=d.objectStore("game-objects");for(const a of this.dirtyGameObjects){const b=this.gameObjects.get(a);b?e.put(b.map(n),a):e.delete(a)}this.terrainGrid.saveDirty(d.objectStore("terrain")),this.rememberedTerrainGrid.saveDirty(d.objectStore("remembered-terrain"))})}tryLoadGame(){return new Promise((a,b)=>{this.reset();const c=this.database.transaction(j.objectStores,"readonly");c.onerror=()=>{c.error?b(c.error):a(!1)},c.onabort=()=>a(!1),c.oncomplete=()=>a(!0),this.terrainGrid.load(c.objectStore("terrain")),this.rememberedTerrainGrid.load(c.objectStore("remembered-terrain")),c.objectStore("game-objects").openCursor().onsuccess=a=>{const b=a.target.result;if(b){const a=b.key,c=l(a),d=m(a),e=b.value.map(a=>f(c,d,a));this.gameObjects.set(a,e),b.continue()}else c.objectStore("game").get(1).onsuccess=a=>{const b=a.target.result;b&&b.version===w?this.setGlobalData(b):c.abort()}}})}markNonDirty(){this.dirtyGameObjects.clear(),this.terrainGrid.markNonDirty(),this.rememberedTerrainGrid.markNonDirty()}}},{"./assert.js":2,"./database.js":4,"./indexutil.js":9,"./permissive-fov.js":14,"./pickle.js":15,"./pqueue.js":16,"./terrain.js":18}]},{},[8]);
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+'use strict';
+
+const GameViewer = require('./gameviewer.js');
+
+const canvas = document.getElementById('theCanvas');
+const messageArea = document.getElementById('messageArea');
+const gameViewer = new GameViewer(canvas, messageArea);
+gameViewer.redrawOnWindowResize();
+gameViewer.redraw().then(console.log, console.error);
+
+},{"./gameviewer.js":7}],2:[function(require,module,exports){
+'use strict';
+
+function lerp(s, x0, x1) {
+  return (1-s)*x0 + s*x1;
+}
+
+const identity = x => x;
+const bump = x => 4*x*(1-x);
+
+class State {
+  constructor(time, x, y, opacity=1) {
+    this.time = time;
+    this.x = x;
+    this.y = y;
+    this.opacity = opacity;
+  }
+
+  interpolate(otherState, time, sfunc)
+  {
+    let s = (time - this.time)/(otherState.time - this.time);
+    s = sfunc(Math.max(0, Math.min(1, s)));
+    return new State(time, 
+        lerp(s, this.x, otherState.x),
+        lerp(s, this.y, otherState.y),
+        lerp(s, this.opacity, otherState.opacity));
+  }
+}
+
+class ObjectAnimation {
+  constructor(gameObject, beginState, endState, sfunc=identity) {
+    this.gameObject = gameObject;
+    this.beginState = beginState;
+    this.endState = endState;
+    this.sfunc = sfunc;
+  }
+
+  getState(time) {
+    return this.beginState.interpolate(this.endState, time, this.sfunc);
+  }
+
+  endTime() {
+    return this.endState.time;
+  }
+}
+
+exports.lerp = lerp;
+exports.bump = bump;
+exports.State = State;
+exports.ObjectAnimation = ObjectAnimation;
+
+},{}],3:[function(require,module,exports){
+'use strict';
+
+class AssertionError extends Error {
+}
+
+function assert(check, message='Invalid assertion') {
+  if (!check) {
+    throw new AssertionError(message);
+  }
+}
+
+module.exports = assert;
+
+},{}],4:[function(require,module,exports){
+'use strict';
+
+class CanvasViewer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.drawPromise = null;
+    // ensure load() is only started on next tick
+    this.loadPromise = Promise.resolve().then(() => this.load());
+    this.dpi = 1;
+  }
+
+  async load() {
+  }
+
+  redraw() {
+    if (this.drawPromise === null) {
+      this.drawPromise = this.loadPromise.then(() =>
+          new Promise((resolve, reject) =>
+            window.requestAnimationFrame((time) => {
+              this.drawPromise = null;
+              try {
+                this.basicDraw(time);
+                resolve(time);
+              } catch (exc) {
+                reject(exc);
+              }
+              })));
+    }
+    return this.drawPromise;
+  }
+
+  async animateUntil(time) {
+    for (;;) {
+      const t = await this.redraw();
+      if (t >= time) {
+        return t;
+      }
+    }
+  }
+
+  redrawOnWindowResize() {
+    window.addEventListener('resize', () => this.redraw(), false);
+  }
+
+  basicDraw(time) {
+    performance.mark('draw-start');
+    const canvas = this.canvas;
+    const width = (canvas.clientWidth * this.dpi)|0;
+    const height = (canvas.clientHeight * this.dpi)|0;
+    if ((width !== canvas.width) || (height !== canvas.height)) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+    this.draw(time);
+    performance.mark('draw-end');
+    performance.measure('draw', 'draw-start', 'draw-end');
+  }
+
+  draw() {}
+
+  getMousePos(evt) {
+    const canvas = this.canvas;
+    const rect = canvas.getBoundingClientRect();
+    return [
+      (evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
+      (evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+    ];
+  }
+}
+
+module.exports = CanvasViewer;
+
+},{}],5:[function(require,module,exports){
+'use strict';
+
+const objectStores = ['game', 'game-objects', 'terrain', 'remembered-terrain'];
+
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+      const request = window.indexedDB.open('SublunarGameDB', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = event => resolve(event.target.result);
+      request.onupgradeneeded = event => {
+        const db = event.target.result;
+        for (const objectStore of objectStores) {
+          db.createObjectStore(objectStore);
+        }
+      };
+   });
+}
+
+exports.objectStores = objectStores;
+exports.openDatabase = openDatabase;
+
+},{}],6:[function(require,module,exports){
+'use strict';
+
+const world = require('./world.js');
+const pqueue = require('./pqueue.js');
+const {getIdFromXY} = require('./indexutil.js');
+const {registerClass} = require('./pickle.js');
+const assert = require('./assert.js');
+
+class GameObject {
+  constructor() {
+    this.flags = 0;
+    this.x = 0;
+    this.y = 0;
+  }
+
+  getFlag(mask) {
+    return (this.flags & mask) === mask;
+  }
+
+  setFlag(mask, flag) {
+    this.flags = flag ? (this.flags | mask) : (this.flags & ~mask);
+  }
+
+  get isPlaced() { return this.getFlag(1); }
+  set isPlaced(flag) { this.setFlag(1, flag); }
+
+  pickleData() {
+    const json = {};
+    if (this.flags) {
+      json.flags = this.flags;
+    }
+    return json;
+  }
+
+  unpickleData(json) {
+    this.flags = json.flags || 0;
+  }
+
+  markDirty() {
+    if (this.isPlaced) {
+      world.dirtyGameObjects.add(getIdFromXY(this.x, this.y));
+    }
+  }
+
+  basicMove(x, y) {
+    if (this.isPlaced) {
+      this.markDirty();
+      world.deleteGameObject(this.x, this.y, this);
+    }
+    this.x = x;
+    this.y = y;
+    this.isPlaced = true;
+    world.setGameObject(x, y, this);
+    this.markDirty();
+    if (this === world.player) {
+      world.updateVisible();
+    }
+  }
+
+  updateSeen() {}
+
+  schedule(deltaTime, action) {
+    const order = world.scheduleOrder;
+    world.scheduleOrder = order + 1;
+    pqueue.insert(world.schedule, {
+      time: world.time + deltaTime,
+      order: order,
+      object: this,
+      action: action
+    });
+  }
+
+  getReference() {
+    if (this.isPlaced) {
+      const index = world.getGameObjects(this.x, this.y).indexOf(this);
+      assert(index >= 0);
+      return Int32Array.of(this.x, this.y, index);
+    } else {
+      return null;
+    }
+  }
+}
+
+GameObject.prototype.passable = true;
+GameObject.prototype.isMonster = false;
+
+registerClass(GameObject, 10);
+
+module.exports = GameObject;
+
+},{"./assert.js":3,"./indexutil.js":9,"./pickle.js":15,"./pqueue.js":16,"./world.js":21}],7:[function(require,module,exports){
+'use strict';
+
+const CanvasViewer = require('./canvasviewer.js');
+const terrain = require('./terrain.js');
+const Monster = require('./monster.js');
+
+const database = require('./database.js');
+const world = require('./world.js');
+const newgame = require('./newgame.js');
+
+const keyToDirection = {
+  "h": [-1, 0],
+  "j": [0, 1],
+  "k": [0, -1],
+  "l": [1, 0],
+  "ArrowLeft": [-1, 0],
+  "ArrowRight": [1, 0],
+  "ArrowUp": [0, -1],
+  "ArrowDown": [0, 1],
+  // non-standard Edge names
+  "Left": [-1, 0],
+  "Right": [1, 0],
+  "Up": [0, -1],
+  "Down": [0, 1],
+  "b": [-1, 1],
+  "n": [1, 1],
+  "y": [-1, -1],
+  "u": [1, -1],
+
+  "1": [-1, -1],
+  "2": [0, -1],
+  "3": [1, -1],
+  "4": [-1, 0],
+  "6": [1, 0],
+  "7": [-1, 1],
+  "8": [0, 1],
+  "9": [1, 1]
+};
+
+class Message {
+  constructor(message, color, hp) {
+    this.message = message;
+    this.color = color;
+    this.repeat = 1;
+    this.hp = hp;
+  }
+
+  makeElement() {
+    const span = document.createElement('span');
+    span.className = 'message-span';
+    span.style.color = this.color;
+    span.appendChild(document.createTextNode(this.message));
+    if (this.repeat > 1) {
+      const span2 = document.createElement('span');
+      span2.style.color = 'white';
+      span2.appendChild(document.createTextNode(` [${this.repeat}x]`));
+      span.appendChild(span2);
+    }
+    if (this.hp !== 0) {
+      const span2 = document.createElement('span');
+      span2.style.color = 'yellow';
+      span2.appendChild(document.createTextNode(` (${this.hp} HP)`));
+      span.appendChild(span2);
+    }
+    return span;
+  }
+ 
+  tryCombine(otherMessage) {
+    if (!otherMessage) {
+      return false;
+    }
+    if ((this.message === otherMessage.message) &&
+      (this.color === otherMessage.color)) {
+      this.repeat += otherMessage.repeat;
+      this.hp += otherMessage.hp;
+      return true;
+    } else {
+      return false;
+    }
+  }
+}
+
+class UserInterface {
+  constructor(gameViewer, messageArea) {
+    this.gameViewer = gameViewer;
+    this.messageArea = messageArea;
+    this.lastMessage = null;
+  }
+
+  redraw() {
+    return this.gameViewer.redraw();
+  }
+
+  async animate(animation) { 
+    const gameViewer = this.gameViewer;
+    gameViewer.animation = animation;
+    const t = await gameViewer.animateUntil(animation.endTime());
+    gameViewer.animation = null;
+    return t;
+  }
+
+  now() {
+    return performance.now();
+  }
+
+  message(message, color='white', hp=0) {
+    const msg = new Message(message, color, hp);
+    if (msg.tryCombine(this.lastMessage)) {
+      this.messageArea.removeChild(this.messageArea.lastChild);
+    }
+    this.messageArea.appendChild(msg.makeElement());
+    this.lastMessage = msg;
+  }
+
+  clearMessageArea() {
+     let last;
+     while ((last = this.messageArea.lastChild)) {
+       this.messageArea.removeChild(last);
+     }
+     this.lastMessage = null;
+  }
+}
+
+class GameViewer extends CanvasViewer {
+  constructor(canvas, messageArea) {
+    super(canvas);
+    this.blocked = false;
+    this.animation = null;
+    const dpi = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    this.dpi = dpi;
+    this.tileSize = 8*Math.round(dpi*5);
+    this.ui = world.ui = new UserInterface(this, messageArea);
+    document.addEventListener('keydown', (evt) => this.onkeydown(evt), false);
+    canvas.addEventListener('click', (evt) => this.onclick(evt), false);
+  }
+
+  async handlePromise(promise) {
+    this.blocked = true;
+    try {
+      await promise;
+      await world.runSchedule();
+      performance.mark('saveGame-start');
+      await world.saveGame();
+      performance.mark('saveGame-end');
+      performance.measure('saveGame', 'saveGame-start', 'saveGame-end');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      this.blocked = false;
+      this.redraw();
+    }
+  }
+
+  onkeydown(evt) {
+    const direction = keyToDirection[evt.key];
+    if (direction) {
+      const [dx, dy] = direction;
+      this.playerMove(dx, dy);
+    } else if (evt.key === '+') {
+      this.tileSize = Math.min(96, this.tileSize + 8);
+      this.redraw();
+    } else if (evt.key === '-') {
+      this.tileSize = Math.max(32, this.tileSize - 8);
+      this.redraw();
+    }
+  }
+
+  onclick(evt) {
+    const [x, y] = this.getMousePos(evt);
+
+    const tileSize = this.tileSize;
+    const borderSize = 2;
+    const fullTileSize = tileSize + borderSize;
+    const canvas = this.canvas;
+
+    const cx = (canvas.width - fullTileSize) >> 1;
+    const cy = (canvas.height - fullTileSize) >> 1;
+
+    const tileX = Math.floor((x - cx)/fullTileSize);
+    const tileY = Math.floor((y - cy)/fullTileSize);
+    if ((Math.abs(tileX) <= 1) && (Math.abs(tileY) <= 1) && ((tileX !== 0) || (tileY !== 0))) {
+      this.playerMove(tileX, tileY);
+    }
+  }
+
+  playerMove(dx, dy) {
+    if (!this.blocked) {
+      this.ui.clearMessageArea();
+      return this.handlePromise(world.tryPlayerMove(dx, dy));
+    }
+  }
+
+  async load() {
+    const dbPromise = database.openDatabase();
+    const p1 = terrain.loadImages();
+    const p2 = Monster.loadImages();
+    world.database = await dbPromise;
+    let msg;
+    if (await world.tryLoadGame()) {
+      msg = 'Game restored.';
+    } else {
+      msg = 'Starting a new game.';
+      newgame();
+      await world.saveGame({clearAll: true});
+    }
+    await p1; await p2;
+    this.ui.clearMessageArea();
+    this.ui.message(msg, 'yellow');
+  }
+
+  draw(time) {
+    const canvas = this.canvas;
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const player = world.player;
+    if (!player || !player.isPlaced) {
+      return;
+    }
+
+    const animation = this.animation;
+
+    const px = player.x;
+    const py = player.y;
+
+    const tileSize = this.tileSize;
+    const borderSize = 2;
+    const fullTileSize = tileSize + borderSize;
+
+    let cx = (width - fullTileSize) >> 1;
+    let cy = (height - fullTileSize) >> 1;
+    const animationObject = animation && animation.gameObject;
+
+    if (animationObject === player) {
+      const state = animation.getState(time);
+      cx -= Math.round((state.x - px) * fullTileSize);
+      cy -= Math.round((state.y - py) * fullTileSize);
+    }
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+
+    for (let iy = Math.floor(-cy/fullTileSize); iy < Math.ceil((height-cy)/fullTileSize); iy++) {
+      for (let ix = Math.floor(-cx/fullTileSize); ix < Math.ceil((width-cx)/fullTileSize); ix++) {
+        const wx = ix + px;
+        const wy = iy + py;
+        const isVisible = world.isVisible(wx, wy);
+        let anythingShown = false;
+	const terrain = world.getRememberedTerrain(wx, wy);
+	const imgs = terrain.images;
+        if (imgs) {
+          ctx.drawImage(imgs.get(tileSize), ix*fullTileSize, iy*fullTileSize);
+          anythingShown = true;
+	}
+        if (isVisible) {
+          for (const gameObject  of world.getGameObjects(wx, wy)) {
+            if (gameObject !== animationObject) {
+              gameObject.draw(ctx, ix*fullTileSize, iy*fullTileSize, tileSize);
+            }
+          }
+        }
+        if (!isVisible && anythingShown) {
+          ctx.fillRect(ix*fullTileSize, iy*fullTileSize, tileSize, tileSize);
+        }
+      }
+    }
+    if (animationObject) {
+      const state = animation.getState(time);
+      const mx = Math.round((state.x - px) * fullTileSize);
+      const my = Math.round((state.y - py) * fullTileSize);
+      const opacity = state.opacity;
+      if (opacity === 1) {
+        animationObject.draw(ctx, mx, my, tileSize);
+      } else if (opacity > 0) {
+        ctx.globalAlpha = opacity;
+        animationObject.draw(ctx, mx, my, tileSize);
+        ctx.globalAlpha = 1;
+      }
+    }
+    if (!this.blocked) {
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.rect(-0.5, -0.5, tileSize+1, tileSize+1);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+module.exports = GameViewer;
+
+},{"./canvasviewer.js":4,"./database.js":5,"./monster.js":10,"./newgame.js":12,"./terrain.js":18,"./world.js":21}],8:[function(require,module,exports){
+'use strict';
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Cannot load image: ${url}`));
+    img.src = url;
+  });
+}
+
+function createCanvas(width, height) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+}
+
+function resizeImage(img, origSize, newSize) {
+  if (origSize === newSize) {
+    return img;
+  }
+
+  const canvas = createCanvas(newSize, newSize);
+  const ctx = canvas.getContext('2d');
+  const factor = newSize/origSize;
+  ctx.scale(factor, factor);
+  ctx.drawImage(img, 0, 0);
+  return canvas;
+}
+
+class ScaledImage {
+  constructor(im1, im2) {
+    this.im1 = im1;
+    this.im2 = im2;
+    this.cachedImage = null;
+    this.cachedImageSize = -1;
+  }
+
+  getUncached(size) {
+    if (size <= this.im1.width) {
+      return resizeImage(this.im1, this.im1.width, size);
+    } else {
+      return resizeImage(this.im2, this.im2.width, size);
+    }
+  }
+
+  get(size) {
+    if (this.cachedImageSize !== size) {
+      this.cachedImage = this.getUncached(size);
+      this.cachedImageSize = size;
+    }
+    return this.cachedImage;
+  }
+}
+
+async function loadImageSizes(url) {
+  const p1 = loadImage(url + '.png');
+  const p2 = loadImage(url + '@2.png');
+  return new ScaledImage(await p1, await p2);
+}
+
+exports.loadImage = loadImage;
+exports.loadImageSizes = loadImageSizes;
+
+},{}],9:[function(require,module,exports){
+'use strict';
+
+const xyMask = (1<<16)-1;
+
+exports.getIdFromXY = (x, y) => (x << 16) | (y & xyMask);
+exports.getXFromId = xy => (xy >> 16);
+exports.getYFromId = xy => ((xy << 16) >> 16);
+
+},{}],10:[function(require,module,exports){
+'use strict';
+
+const {loadImageSizes} = require('./imgutil.js');
+const {awaitPromises} = require('./terrain.js');
+const {registerClass} = require('./pickle.js');
+const {randomInt} = require('./randutil.js');
+const GameObject = require('./game-object.js');
+const world = require('./world.js');
+const animation = require('./animation.js');
+const PathFinder = require('./path-finder.js');
+const {toTitleCase} = require('./textutil.js');
+const assert = require('./assert.js');
+
+const monsterTypes = {};
+const monsterList = [];
+const dummyPromise = Promise.resolve();
+
+class MonsterType {
+  constructor(id, json) {
+    this.id = id;
+    this.name = json.name;
+    this.imageName = json.image || json.name;
+    this.baseDelay = json.baseDelay || 6;
+    this.intelligence = json.intelligence || 10;
+    this.images = null;
+  }
+}
+
+for (const json of require('./monstertype.js')) {
+  const monsterObj = new MonsterType(monsterList.length, json);
+  monsterList.push(monsterObj);
+  monsterTypes[monsterObj.name] = monsterObj;
+}
+
+function drawImageDirection(ctx, img, x, y, direction) {
+  if (direction === 1) {
+    ctx.drawImage(img, x, y);
+  } else {
+    ctx.save();
+    ctx.translate(x + img.width, y);
+    ctx.scale(-1, 1);
+    ctx.drawImage(img, 0, 0);
+    ctx.restore();
+  }
+}
+
+class MonsterPathFinder extends PathFinder {
+  constructor(x0, y0, x1, y1, monster) {
+    super(x0, y0, x1, y1);
+    this.monster = monster;
+  }
+
+  isPassable(x, y) {
+    return this.monster.isPassable(x, y);
+  }
+}
+
+class Monster extends GameObject {
+  constructor(monsterType) {
+    super();
+    this.monsterType = monsterType;
+    this.direction = 2*randomInt(2) - 1;
+  }
+
+  get waiting() { return this.getFlag(2); }
+  set waiting(flag) { this.setFlag(2, flag); }
+
+  pickleData() {
+    const json = super.pickleData();
+    json.mt = this.monsterType.id;
+    json.dir = this.direction;
+    return json;
+  }
+
+  unpickleData(json) {
+    super.unpickleData(json);
+    this.monsterType = monsterList[json.mt];
+    this.direction = json.dir;
+  }
+
+  theName() {
+    const name = this.monsterType.name;
+    if (this.isPlayer()) {
+      return 'your ' + name;
+    } else {
+      return 'the ' + name;
+    }
+  }
+
+  draw(ctx, x, y, tileSize) {
+    const img = this.monsterType.images.get(tileSize);
+    drawImageDirection(ctx, img, x, y, this.direction);
+  }
+
+  sleep(deltaTime) {
+    this.waiting = true;
+    this.schedule(deltaTime, "wakeUp");
+  }
+
+  updateSeen() {
+    if (!this.waiting && !this.isPlayer()) {
+      this.sleep(0);
+    }
+  }
+
+  setDirection(dx) {
+    if (dx !== 0) {
+      this.direction = dx;
+    }
+  }
+
+  doMove(dx, dy) {
+    assert(!this.waiting);
+    const xold = this.x;
+    const yold = this.y;
+    const xnew = xold + dx;
+    const ynew = yold + dy;
+    const oldVisible = world.isVisible(xold, yold);
+    this.basicMove(xnew, ynew);
+    this.sleep(this.monsterType.baseDelay);
+    const newVisible = world.isVisible(xnew, ynew);
+    this.setDirection(dx);
+    if (oldVisible || newVisible) {
+      const time = world.ui.now();
+      return world.ui.animate(
+          new animation.ObjectAnimation(
+            this,
+            new animation.State(time, xold, yold, oldVisible|0),
+            new animation.State(time+100, xnew, ynew, newVisible|0)));
+    } else {
+      return dummyPromise;
+    }
+  }
+
+  doAttack(victim) {
+    assert(!this.waiting);
+    const oldVisible = world.isVisible(this.x, this.y);
+    const newVisible = world.isVisible(victim.x, victim.y);
+    const hp = 4 + randomInt(6);
+    this.setDirection(victim.x - this.x);
+    this.sleep(this.monsterType.baseDelay);
+    if (oldVisible || newVisible) {
+      const time = world.ui.now();
+      world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`, 
+          this.isPlayer() ? 'chartreuse' : 'red', hp);
+      return world.ui.animate(
+          new animation.ObjectAnimation(
+            this,
+            new animation.State(time, this.x, this.y, oldVisible|0),
+            new animation.State(time+100, victim.x, victim.y, newVisible|0),
+            animation.bump));
+    } else {
+      return dummyPromise;
+    }
+  }
+
+  isPlayer() {
+    return this === world.player;
+  }
+
+  isPassable(x, y) {
+    return world.isPassable(x, y);
+  }
+
+  target() {
+    const player = world.player;
+    if (player.isPlaced) {
+      return player;
+    } else {
+      return null;
+    }
+  }
+
+  async wakeUp() {
+    this.waiting = false;
+    if (!this.isPlayer()) {
+      const target = this.target();
+      if (target) {
+        const pf = new MonsterPathFinder(this.x, this.y, target.x, target.y, this);
+        pf.runN(this.monsterType.intelligence);
+        const path = pf.getPath();
+        if (path.length >= 2) {
+          const [x2, y2] = path[1];
+          if (this.isPassable(x2, y2)) {
+            return this.doMove(x2 - this.x, y2 - this.y);
+          } else if (world.getGameObjects(x2, y2).includes(target)) {
+            return this.doAttack(target);
+          }
+        }
+      }
+    }
+  }
+
+  static loadImages() {
+    const promises = [];
+    for (const monster of monsterList) {
+      if (monster.imageName) {
+        promises.push(loadImageSizes('img/' + monster.imageName).then(imgs => { monster.images = imgs; }));
+      }
+    }
+    return awaitPromises(promises);
+  }
+}
+
+Monster.monsterTypes = monsterTypes;
+Monster.monsterList = monsterList;
+Monster.prototype.passable = false;
+Monster.prototype.isMonster = true;
+
+registerClass(Monster, 20);
+
+module.exports = Monster;
+
+},{"./animation.js":2,"./assert.js":3,"./game-object.js":6,"./imgutil.js":8,"./monstertype.js":11,"./path-finder.js":13,"./pickle.js":15,"./randutil.js":17,"./terrain.js":18,"./textutil.js":20,"./world.js":21}],11:[function(require,module,exports){
+'use strict';
+
+module.exports = [
+{
+  name: 'submarine'
+},
+{ 
+  name: 'squid',
+  baseDelay: 12
+}
+];
+
+},{}],12:[function(require,module,exports){
+'use strict';
+
+const {terrainTypes} = require('./terrain.js');
+const Monster = require('./monster.js');
+const world = require('./world.js');
+const {randomStep} = require('./randutil.js');
+
+function randomWalk(n) {
+  let x = 0;
+  let y = 0;
+  for (let i = 0; i < n; i++) {
+    if (y === 0) {
+      world.setTerrain(x, 0, terrainTypes.wave);
+      world.setTerrain(x, -1, terrainTypes.air);
+    } else {
+      world.setTerrain(x, y, terrainTypes.water);
+      if (world.isPassable(x, y) && (Math.random() < 0.01)) {
+        (new Monster(Monster.monsterTypes.squid)).basicMove(x, y);
+      }
+    }
+    for (;;) {
+      const [xn, yn] = randomStep(x, y);
+      if ((yn >= 0) && (yn < 10)) {
+        x = xn; y = yn; break;
+      }
+    }
+  }
+}
+
+function newGame() {
+  world.reset();
+  randomWalk(1000);
+  const player = new Monster(Monster.monsterTypes.submarine);
+  world.player = player;
+  player.basicMove(0, 0);
+  return world;
+}
+
+module.exports = newGame;
+
+},{"./monster.js":10,"./randutil.js":17,"./terrain.js":18,"./world.js":21}],13:[function(require,module,exports){
+'use strict';
+
+const pqueue = require('./pqueue.js');
+const {getIdFromXY} = require('./indexutil.js');
+
+class PathNode {
+  constructor(heuristic, cost, order, x, y, previous) {
+    this.time = heuristic + cost;
+    this.cost = cost;
+    this.order = order;
+    this.x = x;
+    this.y = y;
+    this.previous = previous;
+  }
+}
+
+class PathFinder {
+  constructor(x0, y0, x1, y1) {
+    this.incomplete = true;
+    this.found = false;
+    this.currentNode = null;
+
+    this.x1 = x1;
+    this.y1 = y1;
+    this.closedSet = new Set();
+    this.openSet = [];
+
+    this.addOpenSet(0, x0, y0, null);
+  }
+
+  cost() {
+    return 1;
+  }
+
+  isPassable() {
+    return true;
+  }
+
+  isPassableOrDestination(x, y) {
+    return ((x === this.x1) && (y === this.y1)) || this.isPassable(x, y);
+  }
+
+  addOpenSet(cost, x, y, previous=null) {
+    const dx = x - this.x1;
+    const dy = y - this.y1;
+    const heuristic = Math.max(Math.abs(dx), Math.abs(dy));
+    const order = dx*dx + dy*dy; // use Euclidian norm to break ties
+    pqueue.insert(this.openSet, new PathNode(heuristic, cost, order, x, y, previous));
+  }
+
+  runStep() {
+    if (this.openSet.length === 0) {
+      this.incomplete = false;
+      if (!this.found) {
+        this.currentNode = null;
+      }
+      return;
+    }
+    const currentNode = pqueue.remove(this.openSet);
+    const x = currentNode.x;
+    const y = currentNode.y;
+    const xy = getIdFromXY(x, y);
+    if (this.closedSet.has(xy)) {
+      return;
+    }
+    this.currentNode = currentNode;
+    if ((x === this.x1) && (y === this.y1)) {
+      this.openSet = [];
+      this.incomplete = false;
+      this.found = true;
+      return;
+    }
+    this.closedSet.add(xy);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if ((dx === 0) && (dy === 0)) {
+          continue;
+        }
+        const x2 = x + dx;
+        const y2 = y + dy;
+        const xy2 = getIdFromXY(x2, y2);
+        if (this.closedSet.has(xy2) || !this.isPassableOrDestination(x2, y2)) {
+          continue;
+        }
+        const newCost = currentNode.cost + this.cost(x2, y2);
+        this.addOpenSet(newCost, x2, y2, currentNode);
+      }
+    }
+  }
+
+  run() {
+    while (this.incomplete) {
+      this.runStep();
+    }
+  }
+
+  runN(n) {
+    while (this.incomplete && (n > 0)) {
+      this.runStep();
+      n--;
+    }
+  }
+
+  getPath() {
+    const result = [];
+    let node = this.currentNode;
+    while (node) {
+      result.push([node.x, node.y]);
+      node = node.previous;
+    }
+    result.reverse();
+    return result;
+  }
+}
+
+module.exports = PathFinder;
+
+},{"./indexutil.js":9,"./pqueue.js":16}],14:[function(require,module,exports){
+'use strict';
+
+function zeroCrossing(x1, y1, x2, y2) {
+  const dy = y1 - y2;
+  return x2 * (y1 / dy) - x1 * (y2 / dy);
+}
+
+class Ray {
+  constructor(a, b) {
+    this.a = a;
+    this.b = b;
+  }
+
+  atPoint(x, y) {
+    return this.a*x + this.b - y;
+  }
+
+  zeroCrossing(s1, otherRay, s2) {
+    return new Ray(
+      zeroCrossing(this.a, s1, otherRay.a, s2),
+      zeroCrossing(this.b, s1, otherRay.b, s2));
+  }
+}
+
+class Beam {
+  constructor(rays) {
+    this.rays = rays;
+  }
+
+  isEmpty() {
+    return this.rays.length === 0;
+  }
+
+  splitPoint(x, y) {
+    const negativeRays = [];
+    const zeroRays = [];
+    const positiveRays = [];
+    let hasNegative = false;
+    let hasPositive = false;
+
+    let previousRay = null;
+    let previousS = 0.0;
+    if (this.rays.length >= 3) {
+      previousRay = this.rays[this.rays.length - 1];
+      previousS = previousRay.atPoint(x, y);
+    }
+    for (const ray of this.rays) {
+      const s = ray.atPoint(x, y);
+      if (previousRay && 
+          (((previousS < 0) && (s > 0)) || ((previousS > 0) && (s < 0)))) {
+	const splitRay = previousRay.zeroCrossing(previousS, ray, s);
+	negativeRays.push(splitRay);
+	zeroRays.push(splitRay);
+	positiveRays.push(splitRay);
+      }
+      if (s < 0) {
+	negativeRays.push(ray);
+	hasNegative = true;
+      } else if (s > 0) {
+	positiveRays.push(ray);
+	hasPositive = true;
+      } else {
+	negativeRays.push(ray);
+	zeroRays.push(ray);
+	positiveRays.push(ray);
+      }
+      previousRay = ray;
+      previousS = s;
+    }
+    return {negative: new Beam(hasNegative ? negativeRays: []),
+            zero: new Beam(zeroRays),
+            positive: new Beam(hasPositive ? positiveRays : [])
+    };
+  }
+}
+
+const initialBeam = new Beam([
+  new Ray(0, 0.5),
+  new Ray(0, -0.5),
+  new Ray(1, -1),
+  new Ray(1, 1)
+], true);
+
+class FovTree {
+  constructor(x, y, beam) {
+    this.x = x;
+    this.y = y;
+    this.distance = Math.hypot(x, y);
+    this._beam = beam;
+    this._children = null;
+  }
+
+  _addChild(dx, dy, beam) {
+    if (!beam.isEmpty()) {
+      this._children.push(new FovTree(this.x + dx, this.y + dy, beam));
+    }
+  }
+
+  children() {
+    if (!this._children) {
+      this._children = [];
+      const x = this.x;
+      const y = this.y;
+      const splitBeams = this._beam.splitPoint(x+0.5, y+0.5);
+      this._addChild(0, 1, 
+	splitBeams.positive.splitPoint(x-0.5, y+0.5).negative);
+      this._addChild(1, 1, splitBeams.zero);
+      this._addChild(1, 0,
+	splitBeams.negative.splitPoint(x+0.5, y-0.5).positive);
+    }
+    return this._children;
+  }
+}
+
+const fovTree = new FovTree(0, 0, initialBeam);
+
+exports.fovTree = fovTree;
+
+},{}],15:[function(require,module,exports){
+'use strict';
+
+const assert = require('./assert.js');
+
+const classIdSymbol = Symbol();
+const classIdToConstructor = new Map();
+
+function registerClass(constructor, classId) {
+  assert(classIdToConstructor.get(classId) === undefined, 'Class ID already in use');
+  const prototype = constructor.prototype;
+  assert(prototype.pickleData, 'Class misses pickleData method');
+  assert(prototype.unpickleData, 'Class misses unpickleData method');
+  classIdToConstructor.set(classId, constructor);
+  prototype[classIdSymbol] = classId;
+}
+
+function pickle(obj) {
+  const result = obj.pickleData();
+  result['class'] = obj[classIdSymbol];
+  return result;
+}
+
+function unpickle(json) {
+  const constructor = classIdToConstructor.get(json['class']);
+  const result = new constructor();
+  result.unpickleData(json);
+  return result;
+}
+
+exports.registerClass = registerClass;
+exports.pickle = pickle;
+exports.unpickle = unpickle;
+
+},{"./assert.js":3}],16:[function(require,module,exports){
+'use strict';
+
+function swap(pq, i, j) {
+  const tmp = pq[i];
+  pq[i] = pq[j];
+  pq[j] = tmp;
+}
+
+function lessThan(obj1, obj2) {
+  const time1 = obj1.time;
+  const time2 = obj2.time;
+  return (time1 < time2) || ((time1 === time2) && (obj1.order < obj2.order));
+}
+
+function insert(pq, obj) {
+  let pos = pq.length;
+  pq.push(obj);
+
+  while (pos > 0) {
+    const parentPos = (pos - 1) >> 1;
+    const parentObj = pq[parentPos];
+    if (lessThan(obj, parentObj)) {
+      swap(pq, pos, parentPos);
+      pos = parentPos;
+    } else {
+      break;
+    }
+  }
+}
+
+function remove(pq) {
+  if (pq.length === 0) {
+    return undefined;
+  } else if (pq.length === 1) {
+    return pq.pop();
+  }
+  const result = pq[0];
+  pq[0] = pq.pop();
+  let pos = 0;
+  const obj = pq[pos];
+  for (;;) {
+    const child1 = 2*pos+1;
+    const child2 = 2*pos+2;
+    if (child1 >= pq.length) {
+      break;
+    } else if (child2 >= pq.length) {
+      if (lessThan(pq[child1], obj)) {
+        swap(pq, pos, child1);
+      }
+      break;
+    } else {
+      const child1Obj = pq[child1];
+      const child2Obj = pq[child2];
+      if (!lessThan(child1Obj, obj) && !lessThan(child2Obj, obj)) {
+        break;
+      } else if (lessThan(child1Obj, child2Obj)) {
+        swap(pq, pos, child1);
+        pos = child1;
+      } else {
+        swap(pq, pos, child2);
+        pos = child2;
+      }
+    }
+  }
+  return result;
+}
+
+function test(N=10) {
+  const input = [];
+  const pq = [];
+  for (let i = 0; i < N; i++) {
+    const obj = {time: Math.random(), order: i};
+    insert(pq, obj);
+    input.push(obj);
+  }
+  const output = [];
+  while (pq.length > 0) {
+    output.push(remove(pq));
+  }
+  return [input, output];
+}
+
+exports.insert = insert;
+exports.remove = remove;
+exports.test = test;
+
+},{}],17:[function(require,module,exports){
+'use strict';
+
+function randomInt(n) {
+  return (Math.random() * n)|0;
+}
+
+function randomStep(x=0, y=0) {
+  switch (randomInt(4)) {
+    case 0: x++; break;
+    case 1: y++; break;
+    case 2: x--; break;
+    case 3: y--; break;
+  }
+  return [x, y];
+}
+
+function randomRange(lo, hi) {
+  const n = hi - lo;
+  const nhalf = n>>1;
+  return lo + randomInt(nhalf+1) + randomInt(n-nhalf+1);
+}
+
+exports.randomInt = randomInt;
+exports.randomStep = randomStep;
+exports.randomRange = randomRange;
+
+},{}],18:[function(require,module,exports){
+'use strict';
+
+const {loadImageSizes} = require('./imgutil.js');
+
+async function awaitPromises(promises) {
+  for (const promise of promises) {
+    await promise;
+  }
+}
+
+class Terrain {
+  constructor(id, json) {
+    this.id = id;
+    this.name = json.name;
+    this.transparent = json.transparent;
+    this.passable = json.passable;
+    this.imageName = json.image;
+    this.images = null;
+  }
+}
+
+const terrainTypes = {};
+const terrainList = [];
+
+for (const json of require('./terraintype.js')) {
+  const terrainObj = new Terrain(terrainList.length, json);
+  terrainList.push(terrainObj);
+  terrainTypes[terrainObj.name] = terrainObj;
+}
+
+function loadImages() {
+  const promises = [];
+  for (const terrain of terrainList) {
+    if (terrain.imageName) {
+      promises.push(loadImageSizes('img/' + terrain.imageName).then(imgs => { terrain.images = imgs; }));
+    }
+  }
+  return awaitPromises(promises);
+}
+
+exports.terrainTypes = terrainTypes;
+exports.terrainList = terrainList;
+exports.loadImages = loadImages;
+exports.awaitPromises = awaitPromises;
+
+},{"./imgutil.js":8,"./terraintype.js":19}],19:[function(require,module,exports){
+'use strict';
+
+module.exports = [
+{
+  name: 'unseen',
+  passable: false,
+  transparent: false
+},
+{
+  name: 'wall',
+  image: 'wall',
+  passable: false,
+  transparent: false
+},
+{ 
+  name: 'water',
+  image: 'water',
+  passable: true,
+  transparent: true
+},
+{
+  name: 'wave',
+  image: 'wave',
+  passable: true,
+  transparent: true
+},
+{
+  name: 'air',
+  passable: false,
+  transparent: true
+}
+];
+
+},{}],20:[function(require,module,exports){
+'use strict';
+
+function toTitleCase(str) {
+  if (str === '') {
+    return str;
+  } else {
+    return str[0].toUpperCase() + str.slice(1);
+  }
+}
+
+exports.toTitleCase = toTitleCase;
+
+},{}],21:[function(require,module,exports){
+'use strict';
+
+const permissiveFov = require("./permissive-fov.js");
+const fovTree = permissiveFov.fovTree.children();
+const pqueue = require('./pqueue.js');
+const database = require('./database.js');
+const {getIdFromXY, getXFromId, getYFromId} = require('./indexutil.js');
+const {pickle, unpickle} = require('./pickle.js');
+const assert = require('./assert.js');
+
+const {terrainTypes, terrainList} = require('./terrain.js');
+
+function getTerrainIdFromXY(x, y) {
+  return getIdFromXY(x >> 4, y >> 4);
+}
+
+function getIndexFromXY(x, y) {
+  return ((y & 15) << 4) | (x & 15);
+}
+
+class TerrainGrid {
+  constructor(defaultTerrain) {
+    this.defaultTerrain = defaultTerrain;
+    this.terrainMap = new Map();
+    this.dirty = new Set();
+  }
+
+  get(x, y) {
+    const id = getTerrainIdFromXY(x, y);
+    const array = this.terrainMap.get(id);
+    if (array) {
+      return terrainList[array[getIndexFromXY(x, y)]];
+    } else {
+      return this.defaultTerrain;
+    }
+  }
+
+  set(x, y, terrain) {
+    const id = getTerrainIdFromXY(x, y);
+    this.dirty.add(id);
+    let array = this.terrainMap.get(id);
+    if (!array) {
+      array = new Uint8Array(256);
+      array.fill(this.defaultTerrain.id);
+      this.terrainMap.set(id, array);
+    }
+    array[getIndexFromXY(x, y)] = terrain.id;
+  }
+
+  markNonDirty() {
+    this.dirty.clear();
+  }
+
+  saveDirty(objectStore) {
+    let count = 0;
+    for (const xy of this.dirty) {
+      objectStore.put(this.terrainMap.get(xy), xy);
+      count++;
+    }
+  }
+
+  load(objectStore) {
+    objectStore.openCursor().onsuccess = event => {
+      const cursor = event.target.result;
+      if (cursor) {
+        this.terrainMap.set(cursor.key, cursor.value);
+        cursor.continue();
+      }
+    };
+  }
+}
+
+const dummyPromise = Promise.resolve();
+
+class DummyUserInterface {
+  redraw() { return dummyPromise; }
+  animate() { return dummyPromise; }
+  now() { return 0.0; }
+}
+
+const emptyArray = [];
+
+function getReference(gameObj) {
+  return gameObj ? gameObj.getReference() : null;
+}
+
+function pickleAction(action) {
+  action = Object.assign({}, action);
+  action.object = getReference(action.object);
+  return action;
+}
+
+function unpickleWithLocation(x, y, obj) {
+  obj = unpickle(obj);
+  obj.x = x;
+  obj.y = y;
+  return obj;
+}
+
+const gameVersion = 3;
+
+class World {
+  constructor() {
+    this.terrainGrid = null;
+    this.rememberedTerrainGrid = null;
+    this.gameObjects = null;
+    this.dirtyGameObjects = null;
+    this.player = null;
+    this.visible = null;
+    this.time = 0;
+    this.scheduleOrder = 0;
+    this.schedule = [];
+    this.ui = new DummyUserInterface();
+    this.database = null;
+  }
+
+  reset() {
+    this.terrainGrid = new TerrainGrid(terrainTypes.wall);
+    this.rememberedTerrainGrid = new TerrainGrid(terrainTypes.unseen);
+    this.gameObjects = new Map();
+    this.dirtyGameObjects = new Set();
+    this.visible = new Set();
+    this.time = 0;
+    this.scheduleOrder = 0;
+    this.schedule = [];
+    this.player = null;
+  }
+
+  getTerrain(x, y) {
+    return this.terrainGrid.get(x, y);
+  }
+
+  setTerrain(x, y, terrain) {
+    return this.terrainGrid.set(x, y, terrain);
+  }
+
+  getRememberedTerrain(x, y) {
+    return this.rememberedTerrainGrid.get(x, y);
+  }
+
+  updateSeen(x, y) {
+    this.rememberedTerrainGrid.set(x, y, this.terrainGrid.get(x, y));
+    for (const gameObject of this.getGameObjects(x, y)) {
+      gameObject.updateSeen();
+    }
+  }
+
+  updateVisible() {
+    const visible = new Set();
+    this.visible = visible;
+    const player = this.player;
+    if (!player) {
+      return;
+    }
+    const px = player.x;
+    const py = player.y;
+    const distance = 7;
+    const world = this;
+
+    visible.add(getIdFromXY(px, py));
+    world.updateSeen(px, py);
+
+    function processTrees(trees, t) {
+      for (const tree of trees) {
+        if (tree.distance > distance) {
+          continue;
+        }
+        let x = tree.x; let y = tree.y;
+        if (t & 1) { x = -x; }
+        if (t & 2) { y = -y; }       
+        if (t & 4) {
+          const tmp = x;
+          x = y; y = tmp;
+        }
+        x += px; y += py;
+        visible.add(getIdFromXY(x, y));
+        world.updateSeen(x, y);
+        if (world.getTerrain(x, y).transparent) {
+          processTrees(tree.children(), t);
+        }
+      }
+    }
+
+    for (let t = 0; t < 8; t++) {
+      processTrees(fovTree, t);
+    }
+  }
+
+  isVisible(x, y) {
+    return this.visible.has(getIdFromXY(x, y));
+  }
+
+  setGameObject(x, y, obj) {
+    const xy = getIdFromXY(x, y);
+    const ar = this.gameObjects.get(xy);
+    if (ar) {
+      ar.push(obj);
+    } else {
+      this.gameObjects.set(xy, [obj]);
+    }
+  }
+
+  deleteGameObject(x, y, obj) {
+    const xy = getIdFromXY(x, y);
+    const ar = this.gameObjects.get(xy);
+    if (ar.length === 1) {
+      assert(ar[0] === obj);
+      this.gameObjects.delete(xy);
+    } else {
+      const index = ar.indexOf(obj);
+      assert(index >= 0);
+      ar.splice(index, 1);
+    }
+  }
+
+  getGameObjects(x, y) {
+    return this.gameObjects.get(getIdFromXY(x, y)) || emptyArray;
+  }
+
+  getMonster(x, y) {
+    for (const obj of this.getGameObjects(x, y)) {
+      if (obj.isMonster) {
+        return obj;
+      }
+    }
+    return undefined;
+  }
+
+  isPassable(x, y) {
+    if (!this.getTerrain(x, y).passable) {
+      return false;
+    }
+    for (const gameObject of this.getGameObjects(x, y)) {
+      if (!gameObject.passable) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  tryPlayerMove(dx, dy) {
+    const player = this.player;
+    if (!player) {
+      return dummyPromise;
+    }
+    const xnew = dx + player.x;
+    const ynew = dy + player.y;
+    if (this.isPassable(xnew, ynew)) {
+      return player.doMove(dx, dy);
+    } else {
+      const monster = this.getMonster(xnew, ynew);
+      if (monster) {
+        return player.doAttack(monster);
+      } else {
+        return dummyPromise;
+      }
+    }
+  }
+
+  async runSchedule() {
+    const player = this.player;
+    const schedule = this.schedule;
+    while (player.waiting) {
+      const action = pqueue.remove(schedule);
+      assert(action);
+      this.time = action.time;
+      const object = action.object;
+      if (object && object.isPlaced) {
+        await object[action.action].call(object);
+      }
+    }
+  }
+
+  resolveReference(ref) {
+    if (ref) {
+      return this.getGameObjects(ref[0], ref[1])[ref[2]];
+    } else {
+      return null;
+    }
+  }
+
+  unpickleAction(action) {
+    action = Object.assign({}, action);
+    action.object = this.resolveReference(action.object);
+    return action;
+  }
+
+  getGlobalData() {
+    return {
+      version: gameVersion,
+      visible: this.visible,
+      time: this.time,
+      scheduleOrder: this.scheduleOrder,
+      schedule: this.schedule.map(pickleAction),
+      player: getReference(this.player)
+    };
+  }
+
+  setGlobalData(json) {
+    this.visible = json.visible;
+    this.time = json.time;
+    this.scheduleOrder = json.scheduleOrder;
+    this.schedule = json.schedule.map(action => this.unpickleAction(action));
+    this.player = this.resolveReference(json.player);
+  }
+
+  saveGame({clearAll=false}={}) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.database.transaction(database.objectStores, 'readwrite');
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(new Error('Transaction aborted'));
+      transaction.oncomplete = () => { this.markNonDirty(); resolve(); };
+      if (clearAll) {
+        for (const objectStore of database.objectStores) {
+          transaction.objectStore(objectStore).clear();
+        }
+      }
+      transaction.objectStore('game').put(this.getGlobalData(), 1);
+      const gameObjectsStore = transaction.objectStore('game-objects');
+      let count = 0;
+      for (const xy of this.dirtyGameObjects) {
+        const gameObjects = this.gameObjects.get(xy);
+	count++;
+        if (gameObjects) {
+          gameObjectsStore.put(gameObjects.map(pickle), xy);
+        } else {
+          gameObjectsStore.delete(xy);
+        }
+      }
+      this.terrainGrid.saveDirty(transaction.objectStore('terrain'));
+      this.rememberedTerrainGrid.saveDirty(transaction.objectStore('remembered-terrain'));
+    });
+  }
+
+  tryLoadGame() {
+    return new Promise((resolve, reject) => {
+      this.reset();
+      const transaction = this.database.transaction(database.objectStores, 'readonly');
+      transaction.onerror = () => {
+        if (transaction.error) {
+          reject(transaction.error);
+        } else {
+          resolve(false); // we aborted
+        }
+      };
+      transaction.onabort = () => resolve(false);
+      transaction.oncomplete = () => resolve(true);
+
+      this.terrainGrid.load(transaction.objectStore('terrain'));
+      this.rememberedTerrainGrid.load(transaction.objectStore('remembered-terrain'));
+
+      transaction.objectStore('game-objects').openCursor().onsuccess = event => {
+        const cursor = event.target.result;
+        if (cursor) {
+          const xy = cursor.key;
+          const x = getXFromId(xy);
+          const y = getYFromId(xy);
+          const ar = cursor.value.map(obj => unpickleWithLocation(x, y, obj));
+          this.gameObjects.set(xy, ar);
+          cursor.continue();
+        } else {
+          // go on with reading the rest
+          transaction.objectStore('game').get(1).onsuccess = event => {
+            const result = event.target.result;
+            if (result && (result.version === gameVersion)) {
+              this.setGlobalData(result);
+            } else {
+              transaction.abort();
+            }
+          };
+        }
+      };
+   });
+  }
+
+  markNonDirty() {
+    this.dirtyGameObjects.clear();
+    this.terrainGrid.markNonDirty();
+    this.rememberedTerrainGrid.markNonDirty();
+  }
+}
+
+module.exports = new World();
+
+},{"./assert.js":3,"./database.js":5,"./indexutil.js":9,"./permissive-fov.js":14,"./pickle.js":15,"./pqueue.js":16,"./terrain.js":18}]},{},[1]);

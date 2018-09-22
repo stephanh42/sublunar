@@ -10,7 +10,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "run": "budo js/index.js:bundle.js",
-    "build": "browserify js/index.js | babel-minify -o bundle.js",
+    "build": "browserify js/index.js > bundle.js",
     "lint": "eslint js/*.js",
     "stage": "npm run build && git add -v ."
   },

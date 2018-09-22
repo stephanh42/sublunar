@@ -10,6 +10,10 @@ const assert = require('./assert.js');
 
 const {terrainTypes, terrainList} = require('./terrain.js');
 
+function getTerrainIdFromXY(x, y) {
+  return getIdFromXY(x >> 4, y >> 4);
+}
+
 function getIndexFromXY(x, y) {
   return ((y & 15) << 4) | (x & 15);
 }
@@ -22,7 +26,7 @@ class TerrainGrid {
   }
 
   get(x, y) {
-    const id = getIdFromXY(x, y);
+    const id = getTerrainIdFromXY(x, y);
     const array = this.terrainMap.get(id);
     if (array) {
       return terrainList[array[getIndexFromXY(x, y)]];
@@ -32,7 +36,7 @@ class TerrainGrid {
   }
 
   set(x, y, terrain) {
-    const id = getIdFromXY(x, y);
+    const id = getTerrainIdFromXY(x, y);
     this.dirty.add(id);
     let array = this.terrainMap.get(id);
     if (!array) {
@@ -48,8 +52,10 @@ class TerrainGrid {
   }
 
   saveDirty(objectStore) {
+    let count = 0;
     for (const xy of this.dirty) {
       objectStore.put(this.terrainMap.get(xy), xy);
+      count++;
     }
   }
 
@@ -91,7 +97,7 @@ function unpickleWithLocation(x, y, obj) {
   return obj;
 }
 
-const gameVersion = 2;
+const gameVersion = 3;
 
 class World {
   constructor() {
@@ -311,8 +317,10 @@ class World {
       }
       transaction.objectStore('game').put(this.getGlobalData(), 1);
       const gameObjectsStore = transaction.objectStore('game-objects');
+      let count = 0;
       for (const xy of this.dirtyGameObjects) {
         const gameObjects = this.gameObjects.get(xy);
+	count++;
         if (gameObjects) {
           gameObjectsStore.put(gameObjects.map(pickle), xy);
         } else {

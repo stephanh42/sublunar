@@ -21,13 +21,16 @@
       background-color: black;
       position: absolute;
     }
-    .message-area {
+    .message-area, .status-area {
       width: 100%;
       margin: 4px;
       border: 0;
       position: absolute;
       color: white;
       background-color: rgba(0, 0, 0, 0.5);
+     }
+     .status-area {
+       bottom: 0;
      }
      .message-span {
        margin-left: 4px;
@@ -41,6 +44,8 @@
     <canvas id="theCanvas" width="500" height="500" tabindex="0"></canvas>
     <div id="messageArea" class="message-area">
       Game loading...
+    </div>
+    <div id="statusArea" class="status-area">
     </div>
   </div>
   <script src="bundle.js"></script>

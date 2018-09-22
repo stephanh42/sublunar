@@ -139,7 +139,10 @@ class GameViewer extends CanvasViewer {
     try {
       await promise;
       await world.runSchedule();
+      performance.mark('saveGame-start');
       await world.saveGame();
+      performance.mark('saveGame-end');
+      performance.measure('saveGame', 'saveGame-start', 'saveGame-end');
     } catch (err) {
       console.error(err);
     } finally {

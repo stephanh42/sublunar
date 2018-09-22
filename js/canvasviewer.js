@@ -43,6 +43,7 @@ class CanvasViewer {
   }
 
   basicDraw(time) {
+    performance.mark('draw-start');
     const canvas = this.canvas;
     const width = (canvas.clientWidth * this.dpi)|0;
     const height = (canvas.clientHeight * this.dpi)|0;
@@ -51,6 +52,8 @@ class CanvasViewer {
       canvas.height = height;
     }
     this.draw(time);
+    performance.mark('draw-end');
+    performance.measure('draw', 'draw-start', 'draw-end');
   }
 
   draw() {}

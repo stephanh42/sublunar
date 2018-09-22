@@ -1,17 +1,6 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 'use strict';
 
-const GameViewer = require('./gameviewer.js');
-
-const canvas = document.getElementById('theCanvas');
-const messageArea = document.getElementById('messageArea');
-const gameViewer = new GameViewer(canvas, messageArea);
-gameViewer.redrawOnWindowResize();
-gameViewer.redraw().then(console.log, console.error);
-
-},{"./gameviewer.js":7}],2:[function(require,module,exports){
-'use strict';
-
 function lerp(s, x0, x1) {
   return (1-s)*x0 + s*x1;
 }
@@ -39,11 +28,12 @@ class State {
 }
 
 class ObjectAnimation {
-  constructor(gameObject, beginState, endState, sfunc=identity) {
+  constructor(gameObject, beginState, endState, {sfunc=identity, animatePlayer=true}={}) {
     this.gameObject = gameObject;
     this.beginState = beginState;
     this.endState = endState;
     this.sfunc = sfunc;
+    this.animatePlayer = animatePlayer;
   }
 
   getState(time) {
@@ -60,7 +50,7 @@ exports.bump = bump;
 exports.State = State;
 exports.ObjectAnimation = ObjectAnimation;
 
-},{}],3:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 'use strict';
 
 class AssertionError extends Error {
@@ -74,7 +64,7 @@ function assert(check, message='Invalid assertion') {
 
 module.exports = assert;
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 'use strict';
 
 class CanvasViewer {
@@ -147,7 +137,7 @@ class CanvasViewer {
 
 module.exports = CanvasViewer;
 
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 'use strict';
 
 const objectStores = ['game', 'game-objects', 'terrain', 'remembered-terrain'];
@@ -169,7 +159,7 @@ function openDatabase() {
 exports.objectStores = objectStores;
 exports.openDatabase = openDatabase;
 
-},{}],6:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 const world = require('./world.js');
@@ -260,7 +250,7 @@ registerClass(GameObject, 10);
 
 module.exports = GameObject;
 
-},{"./assert.js":3,"./indexutil.js":9,"./pickle.js":15,"./pqueue.js":16,"./world.js":21}],7:[function(require,module,exports){
+},{"./assert.js":2,"./indexutil.js":9,"./pickle.js":15,"./pqueue.js":16,"./world.js":21}],6:[function(require,module,exports){
 'use strict';
 
 const CanvasViewer = require('./canvasviewer.js');
@@ -497,7 +487,7 @@ class GameViewer extends CanvasViewer {
     let cy = (height - fullTileSize) >> 1;
     const animationObject = animation && animation.gameObject;
 
-    if (animationObject === player) {
+    if ((animationObject === player) && animation.animatePlayer) {
       const state = animation.getState(time);
       cx -= Math.round((state.x - px) * fullTileSize);
       cy -= Math.round((state.y - py) * fullTileSize);
@@ -557,7 +547,7 @@ class GameViewer extends CanvasViewer {
 
 module.exports = GameViewer;
 
-},{"./canvasviewer.js":4,"./database.js":5,"./monster.js":10,"./newgame.js":12,"./terrain.js":18,"./world.js":21}],8:[function(require,module,exports){
+},{"./canvasviewer.js":3,"./database.js":4,"./monster.js":10,"./newgame.js":12,"./terrain.js":18,"./world.js":21}],7:[function(require,module,exports){
 'use strict';
 
 function loadImage(url) {
@@ -623,7 +613,18 @@ async function loadImageSizes(url) {
 exports.loadImage = loadImage;
 exports.loadImageSizes = loadImageSizes;
 
-},{}],9:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
+'use strict';
+
+const GameViewer = require('./gameviewer.js');
+
+const canvas = document.getElementById('theCanvas');
+const messageArea = document.getElementById('messageArea');
+const gameViewer = new GameViewer(canvas, messageArea);
+gameViewer.redrawOnWindowResize();
+gameViewer.redraw().then(console.log, console.error);
+
+},{"./gameviewer.js":6}],9:[function(require,module,exports){
 'use strict';
 
 const xyMask = (1<<16)-1;
@@ -783,7 +784,7 @@ class Monster extends GameObject {
             this,
             new animation.State(time, this.x, this.y, oldVisible|0),
             new animation.State(time+100, victim.x, victim.y, newVisible|0),
-            animation.bump));
+            {sfunc: animation.bump, animatePlayer: false}));
     } else {
       return dummyPromise;
     }
@@ -846,7 +847,7 @@ registerClass(Monster, 20);
 
 module.exports = Monster;
 
-},{"./animation.js":2,"./assert.js":3,"./game-object.js":6,"./imgutil.js":8,"./monstertype.js":11,"./path-finder.js":13,"./pickle.js":15,"./randutil.js":17,"./terrain.js":18,"./textutil.js":20,"./world.js":21}],11:[function(require,module,exports){
+},{"./animation.js":1,"./assert.js":2,"./game-object.js":5,"./imgutil.js":7,"./monstertype.js":11,"./path-finder.js":13,"./pickle.js":15,"./randutil.js":17,"./terrain.js":18,"./textutil.js":20,"./world.js":21}],11:[function(require,module,exports){
 'use strict';
 
 module.exports = [
@@ -1171,7 +1172,7 @@ exports.registerClass = registerClass;
 exports.pickle = pickle;
 exports.unpickle = unpickle;
 
-},{"./assert.js":3}],16:[function(require,module,exports){
+},{"./assert.js":2}],16:[function(require,module,exports){
 'use strict';
 
 function swap(pq, i, j) {
@@ -1331,7 +1332,7 @@ exports.terrainList = terrainList;
 exports.loadImages = loadImages;
 exports.awaitPromises = awaitPromises;
 
-},{"./imgutil.js":8,"./terraintype.js":19}],19:[function(require,module,exports){
+},{"./imgutil.js":7,"./terraintype.js":19}],19:[function(require,module,exports){
 'use strict';
 
 module.exports = [
@@ -1433,10 +1434,8 @@ class TerrainGrid {
   }
 
   saveDirty(objectStore) {
-    let count = 0;
     for (const xy of this.dirty) {
       objectStore.put(this.terrainMap.get(xy), xy);
-      count++;
     }
   }
 
@@ -1698,10 +1697,8 @@ class World {
       }
       transaction.objectStore('game').put(this.getGlobalData(), 1);
       const gameObjectsStore = transaction.objectStore('game-objects');
-      let count = 0;
       for (const xy of this.dirtyGameObjects) {
         const gameObjects = this.gameObjects.get(xy);
-	count++;
         if (gameObjects) {
           gameObjectsStore.put(gameObjects.map(pickle), xy);
         } else {
@@ -1763,4 +1760,4 @@ class World {
 
 module.exports = new World();
 
-},{"./assert.js":3,"./database.js":5,"./indexutil.js":9,"./permissive-fov.js":14,"./pickle.js":15,"./pqueue.js":16,"./terrain.js":18}]},{},[1]);
+},{"./assert.js":2,"./database.js":4,"./indexutil.js":9,"./permissive-fov.js":14,"./pickle.js":15,"./pqueue.js":16,"./terrain.js":18}]},{},[8]);

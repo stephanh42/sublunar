@@ -27,11 +27,12 @@ class State {
 }
 
 class ObjectAnimation {
-  constructor(gameObject, beginState, endState, sfunc=identity) {
+  constructor(gameObject, beginState, endState, {sfunc=identity, animatePlayer=true}={}) {
     this.gameObject = gameObject;
     this.beginState = beginState;
     this.endState = endState;
     this.sfunc = sfunc;
+    this.animatePlayer = animatePlayer;
   }
 
   getState(time) {

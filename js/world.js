@@ -52,10 +52,8 @@ class TerrainGrid {
   }
 
   saveDirty(objectStore) {
-    let count = 0;
     for (const xy of this.dirty) {
       objectStore.put(this.terrainMap.get(xy), xy);
-      count++;
     }
   }
 
@@ -317,10 +315,8 @@ class World {
       }
       transaction.objectStore('game').put(this.getGlobalData(), 1);
       const gameObjectsStore = transaction.objectStore('game-objects');
-      let count = 0;
       for (const xy of this.dirtyGameObjects) {
         const gameObjects = this.gameObjects.get(xy);
-	count++;
         if (gameObjects) {
           gameObjectsStore.put(gameObjects.map(pickle), xy);
         } else {

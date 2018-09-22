@@ -234,7 +234,7 @@ class GameViewer extends CanvasViewer {
     let cy = (height - fullTileSize) >> 1;
     const animationObject = animation && animation.gameObject;
 
-    if (animationObject === player) {
+    if ((animationObject === player) && animation.animatePlayer) {
       const state = animation.getState(time);
       cx -= Math.round((state.x - px) * fullTileSize);
       cy -= Math.round((state.y - py) * fullTileSize);

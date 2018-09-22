@@ -148,7 +148,7 @@ class Monster extends GameObject {
             this,
             new animation.State(time, this.x, this.y, oldVisible|0),
             new animation.State(time+100, victim.x, victim.y, newVisible|0),
-            animation.bump));
+            {sfunc: animation.bump, animatePlayer: false}));
     } else {
       return dummyPromise;
     }

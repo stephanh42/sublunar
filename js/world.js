@@ -95,7 +95,7 @@ function unpickleWithLocation(x, y, obj) {
   return obj;
 }
 
-const gameVersion = 3;
+const gameVersion = 4;
 
 class World {
   constructor() {

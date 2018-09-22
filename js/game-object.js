@@ -13,16 +13,18 @@ class GameObject {
     this.y = 0;
   }
 
-  getFlag(mask) {
+  getFlag(bit) {
+    const mask = 1<<bit;
     return (this.flags & mask) === mask;
   }
 
-  setFlag(mask, flag) {
+  setFlag(bit, flag) {
+    const mask = 1<<bit;
     this.flags = flag ? (this.flags | mask) : (this.flags & ~mask);
   }
 
-  get isPlaced() { return this.getFlag(1); }
-  set isPlaced(flag) { this.setFlag(1, flag); }
+  get isPlaced() { return this.getFlag(0); }
+  set isPlaced(flag) { this.setFlag(0, flag); }
 
   pickleData() {
     const json = {};

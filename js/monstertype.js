@@ -2,10 +2,12 @@
 
 module.exports = [
 {
-  name: 'submarine'
+  name: 'submarine',
+  maxHp: 20,
 },
 { 
   name: 'squid',
-  baseDelay: 12
+  baseDelay: 12,
+  maxHp: 12
 }
 ];

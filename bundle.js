@@ -175,16 +175,18 @@ class GameObject {
     this.y = 0;
   }
 
-  getFlag(mask) {
+  getFlag(bit) {
+    const mask = 1<<bit;
     return (this.flags & mask) === mask;
   }
 
-  setFlag(mask, flag) {
+  setFlag(bit, flag) {
+    const mask = 1<<bit;
     this.flags = flag ? (this.flags | mask) : (this.flags & ~mask);
   }
 
-  get isPlaced() { return this.getFlag(1); }
-  set isPlaced(flag) { this.setFlag(1, flag); }
+  get isPlaced() { return this.getFlag(0); }
+  set isPlaced(flag) { this.setFlag(0, flag); }
 
   pickleData() {
     const json = {};
@@ -639,7 +641,7 @@ exports.getYFromId = xy => ((xy << 16) >> 16);
 const {loadImageSizes} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
 const {registerClass} = require('./pickle.js');
-const {randomInt} = require('./randutil.js');
+const {randomInt, randomRange} = require('./randutil.js');
 const GameObject = require('./game-object.js');
 const world = require('./world.js');
 const animation = require('./animation.js');
@@ -651,25 +653,27 @@ const monsterTypes = {};
 const monsterList = [];
 const dummyPromise = Promise.resolve();
 
-class MonsterType {
-  constructor(id, json) {
-    this.id = id;
-    this.name = json.name;
-    this.imageName = json.image || json.name;
-    this.baseDelay = json.baseDelay || 6;
-    this.intelligence = json.intelligence || 10;
-    this.images = null;
-  }
+function makeMonsterType(id, json) {
+  const result = {
+   id: id,
+   baseDelay: 6,
+   intelligence: 10,
+   hpRecovery: 24,
+   images: null
+  };
+  Object.assign(result, json);
+  result.imageName = result.imageName || result.name;
+  return result;
 }
 
 for (const json of require('./monstertype.js')) {
-  const monsterObj = new MonsterType(monsterList.length, json);
+  const monsterObj = makeMonsterType(monsterList.length, json);
   monsterList.push(monsterObj);
   monsterTypes[monsterObj.name] = monsterObj;
 }
 
 function drawImageDirection(ctx, img, x, y, direction) {
-  if (direction === 1) {
+  if (direction) {
     ctx.drawImage(img, x, y);
   } else {
     ctx.save();
@@ -695,23 +699,36 @@ class Monster extends GameObject {
   constructor(monsterType) {
     super();
     this.monsterType = monsterType;
-    this.direction = 2*randomInt(2) - 1;
+    this.baseHp = monsterType ? monsterType.maxHp : 0;
+    this.baseHpTime = 0;
+    this.direction = (randomInt(2) === 0);
   }
 
-  get waiting() { return this.getFlag(2); }
-  set waiting(flag) { this.setFlag(2, flag); }
+  get waiting() { return this.getFlag(1); }
+  set waiting(flag) { this.setFlag(1, flag); }
+
+  get direction() { return this.getFlag(2); }
+  set direction(flag) { this.setFlag(2, flag); }
 
   pickleData() {
     const json = super.pickleData();
     json.mt = this.monsterType.id;
-    json.dir = this.direction;
+    json.hp = this.baseHp;
+    json.hpTime = this.baseHpTime;
     return json;
   }
 
   unpickleData(json) {
     super.unpickleData(json);
     this.monsterType = monsterList[json.mt];
-    this.direction = json.dir;
+    this.baseHp = json.hp;
+    this.baseHpTime = json.hpTime;
+  }
+
+  getHp() {
+    const dt = world.time - this.baseHpTime;
+    const hp = (this.baseHp + dt * this.monsterType.hpRecovery)|0;
+    return Math.max(0, Math.min(this.monsterType.maxHp, hp));
   }
 
   theName() {
@@ -741,7 +758,7 @@ class Monster extends GameObject {
 
   setDirection(dx) {
     if (dx !== 0) {
-      this.direction = dx;
+      this.direction = (dx > 0);
     }
   }
 
@@ -772,7 +789,7 @@ class Monster extends GameObject {
     assert(!this.waiting);
     const oldVisible = world.isVisible(this.x, this.y);
     const newVisible = world.isVisible(victim.x, victim.y);
-    const hp = 4 + randomInt(6);
+    const hp = randomRange(1, 4);
     this.setDirection(victim.x - this.x);
     this.sleep(this.monsterType.baseDelay);
     if (oldVisible || newVisible) {
@@ -852,11 +869,13 @@ module.exports = Monster;
 
 module.exports = [
 {
-  name: 'submarine'
+  name: 'submarine',
+  maxHp: 20,
 },
 { 
   name: 'squid',
-  baseDelay: 12
+  baseDelay: 12,
+  maxHp: 12
 }
 ];
 
@@ -1477,7 +1496,7 @@ function unpickleWithLocation(x, y, obj) {
   return obj;
 }
 
-const gameVersion = 3;
+const gameVersion = 4;
 
 class World {
   constructor() {

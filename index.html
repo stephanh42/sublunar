@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body, .parent {
+      width: 100%;
+      height: 100%;
+      margin: 0px;
+      border: 0;
+      overflow: hidden; /*  Disable scrollbars */
+      display: block;  /* No floating content on sides */
+      position: relative;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      margin: 0px;
+      border: 0;
+      background-color: black;
+      position: absolute;
+    }
+    .message-area {
+      width: 100%;
+      margin: 4px;
+      border: 0;
+      position: absolute;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+     }
+     .message-span {
+       margin-left: 4px;
+       margin-right: 4px;
+     }
+   </style>
+<title>Sublunar</title>
+</head>
+<body>
+  <div class="parent">
+    <canvas id="theCanvas" width="500" height="500" tabindex="0"></canvas>
+    <div id="messageArea" class="message-area">
+      Game loading...
+    </div>
+  </div>
+  <script src="bundle.js"></script>
+</body>
+</html>

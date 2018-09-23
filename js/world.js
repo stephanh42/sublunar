@@ -74,6 +74,7 @@ class DummyUserInterface {
   redraw() { return dummyPromise; }
   animate() { return dummyPromise; }
   now() { return 0.0; }
+  updateStatusArea() {}
 }
 
 const emptyArray = [];
@@ -262,6 +263,7 @@ class World {
       const action = pqueue.remove(schedule);
       assert(action);
       this.time = action.time;
+      this.ui.updateStatusArea();
       const object = action.object;
       if (object && object.isPlaced) {
         await object[action.action].call(object);

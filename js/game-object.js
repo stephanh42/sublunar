@@ -56,6 +56,7 @@ class GameObject {
     this.markDirty();
     if (this === world.player) {
       world.updateVisible();
+      world.ui.updateStatusArea();
     }
   }
 

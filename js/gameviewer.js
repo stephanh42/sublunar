@@ -74,10 +74,56 @@ class Message {
   }
 }
 
+class StatusArea {
+  constructor(statusArea) {
+    this.statusArea = statusArea;
+    this.state = null;
+  }
+
+  static getState() {
+    const player = world.player;
+    if (player) {
+      return {hp: player.getHp(), maxHp: player.monsterType.maxHp};
+    } else {
+      return null;
+    }
+  }
+
+  static isStateEqual(state1, state2) {
+    if (state1 === state2) {
+      return true;
+    }
+    if ((state1 === null) || (state2 === null)) {
+      return false;
+    }
+    for (const [k, v] of Object.entries(state2)) {
+      if (state1[k] !== v) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  update() {
+    const state = StatusArea.getState();
+    if (StatusArea.isStateEqual(this.state, state)) {
+      return;
+    }
+    this.state = state;
+    const statusArea = this.statusArea;
+    removeAllChildren(statusArea);
+    if (state === null) {
+      return;
+    }
+    statusArea.appendChild(makeSpan(null, `HP: ${state.hp}/${state.maxHp}`, 'white'));
+  }
+}
+
 class UserInterface {
-  constructor(gameViewer, messageArea) {
+  constructor(gameViewer, messageArea, statusArea) {
     this.gameViewer = gameViewer;
     this.messageArea = messageArea;
+    this.statusArea = new StatusArea(statusArea);
     this.lastMessage = null;
   }
 
@@ -110,17 +156,21 @@ class UserInterface {
     removeAllChildren(this.messageArea);
     this.lastMessage = null;
   }
+
+  updateStatusArea() {
+    this.statusArea.update();
+  }
 }
 
 class GameViewer extends CanvasViewer {
-  constructor(canvas, messageArea) {
+  constructor(canvas, messageArea, statusArea) {
     super(canvas);
     this.blocked = false;
     this.animation = null;
     const dpi = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     this.dpi = dpi;
     this.tileSize = 8*Math.round(dpi*5);
-    this.ui = world.ui = new UserInterface(this, messageArea);
+    this.ui = world.ui = new UserInterface(this, messageArea, statusArea);
     document.addEventListener('keydown', (evt) => this.onkeydown(evt), false);
     canvas.addEventListener('click', (evt) => this.onclick(evt), false);
   }
@@ -195,6 +245,7 @@ class GameViewer extends CanvasViewer {
       await world.saveGame({clearAll: true});
     }
     await p1; await p2;
+    this.ui.updateStatusArea();
     this.ui.clearMessageArea();
     this.ui.message(msg, 'yellow');
   }

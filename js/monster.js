@@ -72,6 +72,9 @@ class Monster extends GameObject {
   get direction() { return this.getFlag(2); }
   set direction(flag) { this.setFlag(2, flag); }
 
+  get dead() { return this.getFlag(3); }
+  set dead(flag) { this.setFlag(3, flag); }
+
   pickleData() {
     const json = super.pickleData();
     json.mt = this.monsterType.id;
@@ -88,6 +91,9 @@ class Monster extends GameObject {
   }
 
   getHp() {
+    if (this.dead) {
+      return 0;
+    }
     const dt = world.time - this.baseHpTime;
     const hp = (this.baseHp + dt * this.monsterType.hpRecovery)|0;
     return Math.max(0, Math.min(this.monsterType.maxHp, hp));

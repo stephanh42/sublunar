@@ -273,7 +273,7 @@ registerClass(GameObject, 10);
 
 module.exports = GameObject;
 
-},{"./assert.js":2,"./indexutil.js":10,"./pickle.js":16,"./pqueue.js":17,"./world.js":22}],6:[function(require,module,exports){
+},{"./assert.js":2,"./indexutil.js":10,"./pickle.js":16,"./pqueue.js":17,"./world.js":23}],6:[function(require,module,exports){
 'use strict';
 
 const CanvasViewer = require('./canvasviewer.js');
@@ -632,7 +632,7 @@ class GameViewer extends CanvasViewer {
 
 module.exports = GameViewer;
 
-},{"./canvasviewer.js":3,"./database.js":4,"./htmlutil.js":7,"./monster.js":11,"./newgame.js":13,"./terrain.js":19,"./world.js":22}],7:[function(require,module,exports){
+},{"./canvasviewer.js":3,"./database.js":4,"./htmlutil.js":7,"./monster.js":11,"./newgame.js":13,"./terrain.js":20,"./world.js":23}],7:[function(require,module,exports){
 'use strict';
 
 function makeSpan(className, text, color) {
@@ -1004,7 +1004,7 @@ registerClass(Monster, 20);
 
 module.exports = Monster;
 
-},{"./animation.js":1,"./assert.js":2,"./game-object.js":5,"./imgutil.js":8,"./monstertype.js":12,"./path-finder.js":14,"./pickle.js":16,"./randutil.js":18,"./terrain.js":19,"./textutil.js":21,"./world.js":22}],12:[function(require,module,exports){
+},{"./animation.js":1,"./assert.js":2,"./game-object.js":5,"./imgutil.js":8,"./monstertype.js":12,"./path-finder.js":14,"./pickle.js":16,"./randutil.js":18,"./terrain.js":20,"./textutil.js":22,"./world.js":23}],12:[function(require,module,exports){
 'use strict';
 
 module.exports = [
@@ -1060,7 +1060,7 @@ function newGame() {
 
 module.exports = newGame;
 
-},{"./monster.js":11,"./randutil.js":18,"./terrain.js":19,"./world.js":22}],14:[function(require,module,exports){
+},{"./monster.js":11,"./randutil.js":18,"./terrain.js":20,"./world.js":23}],14:[function(require,module,exports){
 'use strict';
 
 const pqueue = require('./pqueue.js');
@@ -1448,108 +1448,8 @@ exports.randomRange = randomRange;
 },{}],19:[function(require,module,exports){
 'use strict';
 
-const {loadImageSizes} = require('./imgutil.js');
-
-async function awaitPromises(promises) {
-  for (const promise of promises) {
-    await promise;
-  }
-}
-
-class Terrain {
-  constructor(id, json) {
-    this.id = id;
-    this.name = json.name;
-    this.transparent = json.transparent;
-    this.passable = json.passable;
-    this.imageName = json.image;
-    this.images = null;
-  }
-}
-
-const terrainTypes = {};
-const terrainList = [];
-
-for (const json of require('./terraintype.js')) {
-  const terrainObj = new Terrain(terrainList.length, json);
-  terrainList.push(terrainObj);
-  terrainTypes[terrainObj.name] = terrainObj;
-}
-
-function loadImages() {
-  const promises = [];
-  for (const terrain of terrainList) {
-    if (terrain.imageName) {
-      promises.push(loadImageSizes('img/' + terrain.imageName).then(imgs => { terrain.images = imgs; }));
-    }
-  }
-  return awaitPromises(promises);
-}
-
-exports.terrainTypes = terrainTypes;
-exports.terrainList = terrainList;
-exports.loadImages = loadImages;
-exports.awaitPromises = awaitPromises;
-
-},{"./imgutil.js":8,"./terraintype.js":20}],20:[function(require,module,exports){
-'use strict';
-
-module.exports = [
-{
-  name: 'unseen',
-  passable: false,
-  transparent: false
-},
-{
-  name: 'wall',
-  image: 'wall',
-  passable: false,
-  transparent: false
-},
-{
-  name: 'water',
-  image: 'water',
-  passable: true,
-  transparent: true
-},
-{
-  name: 'wave',
-  image: 'wave',
-  passable: true,
-  transparent: true
-},
-{
-  name: 'air',
-  passable: false,
-  transparent: true
-}
-];
-
-},{}],21:[function(require,module,exports){
-'use strict';
-
-function toTitleCase(str) {
-  if (str === '') {
-    return str;
-  } else {
-    return str[0].toUpperCase() + str.slice(1);
-  }
-}
-
-exports.toTitleCase = toTitleCase;
-
-},{}],22:[function(require,module,exports){
-'use strict';
-
-const permissiveFov = require("./permissive-fov.js");
-const fovTree = permissiveFov.fovTree.children();
-const pqueue = require('./pqueue.js');
-const database = require('./database.js');
-const {getIdFromXY, getXFromId, getYFromId} = require('./indexutil.js');
-const {pickle, unpickle} = require('./pickle.js');
-const assert = require('./assert.js');
-
-const {terrainTypes, terrainList} = require('./terrain.js');
+const {getIdFromXY} = require('./indexutil.js');
+const {terrainList} = require('./terrain.js');
 
 function getTerrainIdFromXY(x, y) {
   return getIdFromXY(x >> 4, y >> 4);
@@ -1608,6 +1508,115 @@ class TerrainGrid {
     };
   }
 }
+
+module.exports = TerrainGrid;
+
+},{"./indexutil.js":10,"./terrain.js":20}],20:[function(require,module,exports){
+'use strict';
+
+const {loadImageSizes} = require('./imgutil.js');
+
+async function awaitPromises(promises) {
+  for (const promise of promises) {
+    await promise;
+  }
+}
+
+class Terrain {
+  constructor(id, json) {
+    this.id = id;
+    this.name = json.name;
+    this.transparent = json.transparent;
+    this.passable = json.passable;
+    this.imageName = json.image;
+    this.images = null;
+  }
+}
+
+const terrainTypes = {};
+const terrainList = [];
+
+for (const json of require('./terraintype.js')) {
+  const terrainObj = new Terrain(terrainList.length, json);
+  terrainList.push(terrainObj);
+  terrainTypes[terrainObj.name] = terrainObj;
+}
+
+function loadImages() {
+  const promises = [];
+  for (const terrain of terrainList) {
+    if (terrain.imageName) {
+      promises.push(loadImageSizes('img/' + terrain.imageName).then(imgs => { terrain.images = imgs; }));
+    }
+  }
+  return awaitPromises(promises);
+}
+
+exports.terrainTypes = terrainTypes;
+exports.terrainList = terrainList;
+exports.loadImages = loadImages;
+exports.awaitPromises = awaitPromises;
+
+},{"./imgutil.js":8,"./terraintype.js":21}],21:[function(require,module,exports){
+'use strict';
+
+module.exports = [
+{
+  name: 'unseen',
+  passable: false,
+  transparent: false
+},
+{
+  name: 'wall',
+  image: 'wall',
+  passable: false,
+  transparent: false
+},
+{
+  name: 'water',
+  image: 'water',
+  passable: true,
+  transparent: true
+},
+{
+  name: 'wave',
+  image: 'wave',
+  passable: true,
+  transparent: true
+},
+{
+  name: 'air',
+  passable: false,
+  transparent: true
+}
+];
+
+},{}],22:[function(require,module,exports){
+'use strict';
+
+function toTitleCase(str) {
+  if (str === '') {
+    return str;
+  } else {
+    return str[0].toUpperCase() + str.slice(1);
+  }
+}
+
+exports.toTitleCase = toTitleCase;
+
+},{}],23:[function(require,module,exports){
+'use strict';
+
+const permissiveFov = require("./permissive-fov.js");
+const fovTree = permissiveFov.fovTree.children();
+const pqueue = require('./pqueue.js');
+const database = require('./database.js');
+const {getIdFromXY, getXFromId, getYFromId} = require('./indexutil.js');
+const {pickle, unpickle} = require('./pickle.js');
+const assert = require('./assert.js');
+
+const {terrainTypes} = require('./terrain.js');
+const TerrainGrid = require('./terrain-grid.js');
 
 const dummyPromise = Promise.resolve();
 
@@ -1927,4 +1936,4 @@ class World {
 
 module.exports = new World();
 
-},{"./assert.js":2,"./database.js":4,"./indexutil.js":10,"./permissive-fov.js":15,"./pickle.js":16,"./pqueue.js":17,"./terrain.js":19}]},{},[9]);
+},{"./assert.js":2,"./database.js":4,"./indexutil.js":10,"./permissive-fov.js":15,"./pickle.js":16,"./pqueue.js":17,"./terrain-grid.js":19,"./terrain.js":20}]},{},[9]);

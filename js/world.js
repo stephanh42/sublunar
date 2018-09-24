@@ -166,7 +166,7 @@ class World {
         }
         let x = tree.x; let y = tree.y;
         if (t & 1) { x = -x; }
-        if (t & 2) { y = -y; }       
+        if (t & 2) { y = -y; }
         if (t & 4) {
           const tmp = x;
           x = y; y = tmp;

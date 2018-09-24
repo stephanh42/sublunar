@@ -48,7 +48,7 @@ class GameObject {
     if (this === world.player) {
       world.updateVisible();
       world.ui.updateStatusArea();
-    }  
+    }
   }
 
   basicMove(x, y) {

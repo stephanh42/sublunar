@@ -188,7 +188,7 @@ class Monster extends GameObject {
     this.sleep(this.monsterType.baseDelay);
     if (oldVisible || newVisible) {
       const time = world.ui.now();
-      world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`, 
+      world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
           this.isPlayer() ? 'chartreuse' : 'red', hp);
       await world.ui.animate(
           new animation.ObjectAnimation(

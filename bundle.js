@@ -20,7 +20,7 @@ class State {
   {
     let s = (time - this.time)/(otherState.time - this.time);
     s = sfunc(Math.max(0, Math.min(1, s)));
-    return new State(time, 
+    return new State(time,
         lerp(s, this.x, otherState.x),
         lerp(s, this.y, otherState.y),
         lerp(s, this.opacity, otherState.opacity));
@@ -210,7 +210,7 @@ class GameObject {
     if (this === world.player) {
       world.updateVisible();
       world.ui.updateStatusArea();
-    }  
+    }
   }
 
   basicMove(x, y) {
@@ -334,7 +334,7 @@ class Message {
     }
     return span;
   }
- 
+
   tryCombine(otherMessage) {
     if (!otherMessage) {
       return false;
@@ -360,7 +360,7 @@ class StatusArea {
     const player = world.player;
     if (player) {
       return {
-        hp: player.getHp(), 
+        hp: player.getHp(),
         maxHp: player.monsterType.maxHp,
         dead: player.dead,
         depth: player.y
@@ -423,7 +423,7 @@ class UserInterface {
     return this.gameViewer.redraw();
   }
 
-  async animate(animation) { 
+  async animate(animation) {
     const gameViewer = this.gameViewer;
     gameViewer.animation = animation;
     const t = await gameViewer.animateUntil(animation.endTime());
@@ -468,7 +468,7 @@ class GameViewer extends CanvasViewer {
   }
 
   isBlocked() {
-    return this.blocked || !world.player || world.player.dead; 
+    return this.blocked || !world.player || world.player.dead;
   }
 
   async handlePromise(promise) {
@@ -933,7 +933,7 @@ class Monster extends GameObject {
     this.sleep(this.monsterType.baseDelay);
     if (oldVisible || newVisible) {
       const time = world.ui.now();
-      world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`, 
+      world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
           this.isPlayer() ? 'chartreuse' : 'red', hp);
       await world.ui.animate(
           new animation.ObjectAnimation(
@@ -1012,7 +1012,7 @@ module.exports = [
   name: 'submarine',
   maxHp: 20,
 },
-{ 
+{
   name: 'squid',
   baseDelay: 12,
   maxHp: 12
@@ -1227,7 +1227,7 @@ class Beam {
     }
     for (const ray of this.rays) {
       const s = ray.atPoint(x, y);
-      if (previousRay && 
+      if (previousRay &&
           (((previousS < 0) && (s > 0)) || ((previousS > 0) && (s < 0)))) {
 	const splitRay = previousRay.zeroCrossing(previousS, ray, s);
 	negativeRays.push(splitRay);
@@ -1283,7 +1283,7 @@ class FovTree {
       const x = this.x;
       const y = this.y;
       const splitBeams = this._beam.splitPoint(x+0.5, y+0.5);
-      this._addChild(0, 1, 
+      this._addChild(0, 1,
 	splitBeams.positive.splitPoint(x-0.5, y+0.5).negative);
       this._addChild(1, 1, splitBeams.zero);
       this._addChild(1, 0,
@@ -1506,7 +1506,7 @@ module.exports = [
   passable: false,
   transparent: false
 },
-{ 
+{
   name: 'water',
   image: 'water',
   passable: true,
@@ -1707,7 +1707,7 @@ class World {
         }
         let x = tree.x; let y = tree.y;
         if (t & 1) { x = -x; }
-        if (t & 2) { y = -y; }       
+        if (t & 2) { y = -y; }
         if (t & 4) {
           const tmp = x;
           x = y; y = tmp;

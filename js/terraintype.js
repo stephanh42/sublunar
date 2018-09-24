@@ -12,7 +12,7 @@ module.exports = [
   passable: false,
   transparent: false
 },
-{ 
+{
   name: 'water',
   image: 'water',
   passable: true,

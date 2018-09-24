@@ -46,7 +46,7 @@ class Beam {
     }
     for (const ray of this.rays) {
       const s = ray.atPoint(x, y);
-      if (previousRay && 
+      if (previousRay &&
           (((previousS < 0) && (s > 0)) || ((previousS > 0) && (s < 0)))) {
 	const splitRay = previousRay.zeroCrossing(previousS, ray, s);
 	negativeRays.push(splitRay);
@@ -102,7 +102,7 @@ class FovTree {
       const x = this.x;
       const y = this.y;
       const splitBeams = this._beam.splitPoint(x+0.5, y+0.5);
-      this._addChild(0, 1, 
+      this._addChild(0, 1,
 	splitBeams.positive.splitPoint(x-0.5, y+0.5).negative);
       this._addChild(1, 1, splitBeams.zero);
       this._addChild(1, 0,

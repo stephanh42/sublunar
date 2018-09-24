@@ -19,7 +19,7 @@ class State {
   {
     let s = (time - this.time)/(otherState.time - this.time);
     s = sfunc(Math.max(0, Math.min(1, s)));
-    return new State(time, 
+    return new State(time,
         lerp(s, this.x, otherState.x),
         lerp(s, this.y, otherState.y),
         lerp(s, this.opacity, otherState.opacity));

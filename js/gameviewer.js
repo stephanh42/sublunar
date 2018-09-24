@@ -58,7 +58,7 @@ class Message {
     }
     return span;
   }
- 
+
   tryCombine(otherMessage) {
     if (!otherMessage) {
       return false;
@@ -84,7 +84,7 @@ class StatusArea {
     const player = world.player;
     if (player) {
       return {
-        hp: player.getHp(), 
+        hp: player.getHp(),
         maxHp: player.monsterType.maxHp,
         dead: player.dead,
         depth: player.y
@@ -147,7 +147,7 @@ class UserInterface {
     return this.gameViewer.redraw();
   }
 
-  async animate(animation) { 
+  async animate(animation) {
     const gameViewer = this.gameViewer;
     gameViewer.animation = animation;
     const t = await gameViewer.animateUntil(animation.endTime());
@@ -192,7 +192,7 @@ class GameViewer extends CanvasViewer {
   }
 
   isBlocked() {
-    return this.blocked || !world.player || world.player.dead; 
+    return this.blocked || !world.player || world.player.dead;
   }
 
   async handlePromise(promise) {

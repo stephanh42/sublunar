@@ -13,7 +13,8 @@
     "no-console": "off",
     "semi": ["error", "always"],
     "eqeqeq": ["error", "always"],
-    "strict": ["error", "global"]
+    "strict": ["error", "global"],
+    "no-trailing-spaces": ["error"]
   },
   "root": true
 }

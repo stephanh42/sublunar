@@ -83,7 +83,12 @@ class StatusArea {
   static getState() {
     const player = world.player;
     if (player) {
-      return {hp: player.getHp(), maxHp: player.monsterType.maxHp};
+      return {
+        hp: player.getHp(), 
+        maxHp: player.monsterType.maxHp,
+        dead: player.dead,
+        depth: player.y
+      };
     } else {
       return null;
     }
@@ -115,7 +120,18 @@ class StatusArea {
     if (state === null) {
       return;
     }
-    statusArea.appendChild(makeSpan(null, `HP: ${state.hp}/${state.maxHp}`, 'white'));
+    let hpColor = 'chartreuse';
+    for (const [limit, color] of [[0.25, 'red'], [0.5, 'orange'], [0.75, 'yellow']]) {
+      if (state.hp <= limit * state.maxHp) {
+        hpColor = color;
+        break;
+      }
+    }
+    statusArea.appendChild(makeSpan('status-span', `HP: ${state.hp}/${state.maxHp}`, hpColor));
+    statusArea.appendChild(makeSpan('status-span', `Depth: ${state.depth}`, 'white'));
+    if (state.dead) {
+      statusArea.appendChild(makeSpan('status-span', 'Dead', 'red'));
+    }
   }
 }
 

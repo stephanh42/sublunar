@@ -92,15 +92,20 @@ class GameObject {
     if (this.isPlaced) {
       const index = world.getGameObjects(this.x, this.y).indexOf(this);
       assert(index >= 0);
-      return Int32Array.of(this.x, this.y, index);
+      return Int32Array.of(getIdFromXY(this.x, this.y), index);
     } else {
       return null;
     }
   }
-}
 
-GameObject.prototype.passable = true;
-GameObject.prototype.isMonster = false;
+  isMonster() {
+    return false;
+  }
+
+  isBlocking() {
+    return this.isMonster();
+  }
+}
 
 registerClass(GameObject, 10);
 

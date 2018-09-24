@@ -246,12 +246,14 @@ class Monster extends GameObject {
     }
     return awaitPromises(promises);
   }
+
+  isMonster() {
+    return !this.dead;
+  }
 }
 
 Monster.monsterTypes = monsterTypes;
 Monster.monsterList = monsterList;
-Monster.prototype.passable = false;
-Monster.prototype.isMonster = true;
 
 registerClass(Monster, 20);
 

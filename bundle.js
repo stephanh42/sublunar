@@ -254,15 +254,20 @@ class GameObject {
     if (this.isPlaced) {
       const index = world.getGameObjects(this.x, this.y).indexOf(this);
       assert(index >= 0);
-      return Int32Array.of(this.x, this.y, index);
+      return Int32Array.of(getIdFromXY(this.x, this.y), index);
     } else {
       return null;
     }
   }
-}
 
-GameObject.prototype.passable = true;
-GameObject.prototype.isMonster = false;
+  isMonster() {
+    return false;
+  }
+
+  isBlocking() {
+    return this.isMonster();
+  }
+}
 
 registerClass(GameObject, 10);
 
@@ -354,7 +359,12 @@ class StatusArea {
   static getState() {
     const player = world.player;
     if (player) {
-      return {hp: player.getHp(), maxHp: player.monsterType.maxHp};
+      return {
+        hp: player.getHp(), 
+        maxHp: player.monsterType.maxHp,
+        dead: player.dead,
+        depth: player.y
+      };
     } else {
       return null;
     }
@@ -386,7 +396,18 @@ class StatusArea {
     if (state === null) {
       return;
     }
-    statusArea.appendChild(makeSpan(null, `HP: ${state.hp}/${state.maxHp}`, 'white'));
+    let hpColor = 'chartreuse';
+    for (const [limit, color] of [[0.25, 'red'], [0.5, 'orange'], [0.75, 'yellow']]) {
+      if (state.hp <= limit * state.maxHp) {
+        hpColor = color;
+        break;
+      }
+    }
+    statusArea.appendChild(makeSpan('status-span', `HP: ${state.hp}/${state.maxHp}`, hpColor));
+    statusArea.appendChild(makeSpan('status-span', `Depth: ${state.depth}`, 'white'));
+    if (state.dead) {
+      statusArea.appendChild(makeSpan('status-span', 'Dead', 'red'));
+    }
   }
 }
 
@@ -970,12 +991,14 @@ class Monster extends GameObject {
     }
     return awaitPromises(promises);
   }
+
+  isMonster() {
+    return !this.dead;
+  }
 }
 
 Monster.monsterTypes = monsterTypes;
 Monster.monsterList = monsterList;
-Monster.prototype.passable = false;
-Monster.prototype.isMonster = true;
 
 registerClass(Monster, 20);
 
@@ -1614,7 +1637,7 @@ function unpickleWithLocation(x, y, obj) {
   return obj;
 }
 
-const gameVersion = 5;
+const gameVersion = 6;
 
 class World {
   constructor() {
@@ -1735,10 +1758,14 @@ class World {
   }
 
   getMonster(x, y) {
-    for (const obj of this.getGameObjects(x, y)) {
-      if (obj.isMonster) {
+    const ar = this.getGameObjects(x, y);
+    let i = ar.length - 1;
+    while (i >= 0) {
+      const obj = ar[i];
+      if (obj.isMonster()) {
         return obj;
       }
+      i--;
     }
     return undefined;
   }
@@ -1748,7 +1775,7 @@ class World {
       return false;
     }
     for (const gameObject of this.getGameObjects(x, y)) {
-      if (!gameObject.passable) {
+      if (gameObject.isBlocking()) {
         return false;
       }
     }
@@ -1791,7 +1818,7 @@ class World {
 
   resolveReference(ref) {
     if (ref) {
-      return this.getGameObjects(ref[0], ref[1])[ref[2]];
+      return this.gameObjects.get(ref[0])[ref[1]];
     } else {
       return null;
     }

@@ -96,7 +96,7 @@ function unpickleWithLocation(x, y, obj) {
   return obj;
 }
 
-const gameVersion = 5;
+const gameVersion = 6;
 
 class World {
   constructor() {
@@ -217,10 +217,14 @@ class World {
   }
 
   getMonster(x, y) {
-    for (const obj of this.getGameObjects(x, y)) {
-      if (obj.isMonster) {
+    const ar = this.getGameObjects(x, y);
+    let i = ar.length - 1;
+    while (i >= 0) {
+      const obj = ar[i];
+      if (obj.isMonster()) {
         return obj;
       }
+      i--;
     }
     return undefined;
   }
@@ -230,7 +234,7 @@ class World {
       return false;
     }
     for (const gameObject of this.getGameObjects(x, y)) {
-      if (!gameObject.passable) {
+      if (gameObject.isBlocking()) {
         return false;
       }
     }
@@ -273,7 +277,7 @@ class World {
 
   resolveReference(ref) {
     if (ref) {
-      return this.getGameObjects(ref[0], ref[1])[ref[2]];
+      return this.gameObjects.get(ref[0])[ref[1]];
     } else {
       return null;
     }

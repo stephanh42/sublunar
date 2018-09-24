@@ -162,6 +162,91 @@ exports.openDatabase = openDatabase;
 },{}],5:[function(require,module,exports){
 'use strict';
 
+const keyToDirection = {
+  "h": [-1, 0],
+  "j": [0, 1],
+  "k": [0, -1],
+  "l": [1, 0],
+  "ArrowLeft": [-1, 0],
+  "ArrowRight": [1, 0],
+  "ArrowUp": [0, -1],
+  "ArrowDown": [0, 1],
+  // non-standard Edge names
+  "Left": [-1, 0],
+  "Right": [1, 0],
+  "Up": [0, -1],
+  "Down": [0, 1],
+  "b": [-1, 1],
+  "n": [1, 1],
+  "y": [-1, -1],
+  "u": [1, -1],
+
+  "1": [-1, -1],
+  "2": [0, -1],
+  "3": [1, -1],
+  "4": [-1, 0],
+  "6": [1, 0],
+  "7": [-1, 1],
+  "8": [0, 1],
+  "9": [1, 1]
+};
+
+
+class BlockedEventHandler {
+  isActive() { return false; }
+
+  onkeydown() {}
+  onclick() {}
+}
+
+class ActiveEventHandler {
+  constructor(canvasViewer) {
+    this.canvasViewer = canvasViewer;
+  }
+
+  isActive() { return true; }
+
+  onkeydown(evt) {
+    const direction = keyToDirection[evt.key];
+    const canvasViewer = this.canvasViewer;
+    if (direction) {
+      const [dx, dy] = direction;
+      canvasViewer.playerMove(dx, dy);
+    } else if (evt.key === '+') {
+      canvasViewer.tileSize = Math.min(96, canvasViewer.tileSize + 8);
+      canvasViewer.redraw();
+    } else if (evt.key === '-') {
+      canvasViewer.tileSize = Math.max(32, canvasViewer.tileSize - 8);
+      canvasViewer.redraw();
+    }
+  }
+
+  onclick(evt) {
+    const canvasViewer = this.canvasViewer;
+    const [x, y] = canvasViewer.getMousePos(evt);
+
+    const tileSize = canvasViewer.tileSize;
+    const borderSize = 2;
+    const fullTileSize = tileSize + borderSize;
+    const canvas = canvasViewer.canvas;
+
+    const cx = (canvas.width - fullTileSize) >> 1;
+    const cy = (canvas.height - fullTileSize) >> 1;
+
+    const tileX = Math.floor((x - cx)/fullTileSize);
+    const tileY = Math.floor((y - cy)/fullTileSize);
+    if ((Math.abs(tileX) <= 1) && (Math.abs(tileY) <= 1) && ((tileX !== 0) || (tileY !== 0))) {
+      canvasViewer.playerMove(tileX, tileY);
+    }
+  }
+}
+
+exports.blockedEventHandler = new BlockedEventHandler();
+exports.ActiveEventHandler = ActiveEventHandler;
+
+},{}],6:[function(require,module,exports){
+'use strict';
+
 const world = require('./world.js');
 const pqueue = require('./pqueue.js');
 const {getIdFromXY} = require('./indexutil.js');
@@ -273,7 +358,7 @@ registerClass(GameObject, 10);
 
 module.exports = GameObject;
 
-},{"./assert.js":2,"./indexutil.js":10,"./pickle.js":16,"./pqueue.js":17,"./world.js":23}],6:[function(require,module,exports){
+},{"./assert.js":2,"./indexutil.js":11,"./pickle.js":17,"./pqueue.js":18,"./world.js":24}],7:[function(require,module,exports){
 'use strict';
 
 const CanvasViewer = require('./canvasviewer.js');
@@ -284,35 +369,8 @@ const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
 const {makeSpan, removeAllChildren} = require('./htmlutil.js');
-
-const keyToDirection = {
-  "h": [-1, 0],
-  "j": [0, 1],
-  "k": [0, -1],
-  "l": [1, 0],
-  "ArrowLeft": [-1, 0],
-  "ArrowRight": [1, 0],
-  "ArrowUp": [0, -1],
-  "ArrowDown": [0, 1],
-  // non-standard Edge names
-  "Left": [-1, 0],
-  "Right": [1, 0],
-  "Up": [0, -1],
-  "Down": [0, 1],
-  "b": [-1, 1],
-  "n": [1, 1],
-  "y": [-1, -1],
-  "u": [1, -1],
-
-  "1": [-1, -1],
-  "2": [0, -1],
-  "3": [1, -1],
-  "4": [-1, 0],
-  "6": [1, 0],
-  "7": [-1, 1],
-  "8": [0, 1],
-  "9": [1, 1]
-};
+const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
+const assert = require('./assert.js');
 
 class Message {
   constructor(message, color, hp) {
@@ -457,22 +515,24 @@ class UserInterface {
 class GameViewer extends CanvasViewer {
   constructor(canvas, messageArea, statusArea) {
     super(canvas);
-    this.blocked = false;
+    this.eventHandlers = [new ActiveEventHandler(this)];
     this.animation = null;
     const dpi = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     this.dpi = dpi;
     this.tileSize = 8*Math.round(dpi*5);
     this.ui = world.ui = new UserInterface(this, messageArea, statusArea);
-    document.addEventListener('keydown', (evt) => this.onkeydown(evt), false);
-    canvas.addEventListener('click', (evt) => this.onclick(evt), false);
+    document.addEventListener('keydown', (evt) => this.eventHandler().onkeydown(evt), false);
+    canvas.addEventListener('click', (evt) => this.eventHandler().onclick(evt), false);
   }
 
+  eventHandler() { return this.eventHandlers[this.eventHandlers.length-1]; }
+
   isBlocked() {
-    return this.blocked || !world.player || world.player.dead;
+    return !this.eventHandler().isActive() || !world.player || world.player.dead;
   }
 
   async handlePromise(promise) {
-    this.blocked = true;
+    this.eventHandlers.push(blockedEventHandler);
     try {
       await promise;
       await world.runSchedule();
@@ -483,48 +543,14 @@ class GameViewer extends CanvasViewer {
     } catch (err) {
       console.error(err);
     } finally {
-      this.blocked = false;
+      assert(this.eventHandlers.pop() === blockedEventHandler);
       this.redraw();
-    }
-  }
-
-  onkeydown(evt) {
-    const direction = keyToDirection[evt.key];
-    if (direction) {
-      const [dx, dy] = direction;
-      this.playerMove(dx, dy);
-    } else if (evt.key === '+') {
-      this.tileSize = Math.min(96, this.tileSize + 8);
-      this.redraw();
-    } else if (evt.key === '-') {
-      this.tileSize = Math.max(32, this.tileSize - 8);
-      this.redraw();
-    }
-  }
-
-  onclick(evt) {
-    const [x, y] = this.getMousePos(evt);
-
-    const tileSize = this.tileSize;
-    const borderSize = 2;
-    const fullTileSize = tileSize + borderSize;
-    const canvas = this.canvas;
-
-    const cx = (canvas.width - fullTileSize) >> 1;
-    const cy = (canvas.height - fullTileSize) >> 1;
-
-    const tileX = Math.floor((x - cx)/fullTileSize);
-    const tileY = Math.floor((y - cy)/fullTileSize);
-    if ((Math.abs(tileX) <= 1) && (Math.abs(tileY) <= 1) && ((tileX !== 0) || (tileY !== 0))) {
-      this.playerMove(tileX, tileY);
     }
   }
 
   playerMove(dx, dy) {
-    if (!this.isBlocked()) {
-      this.ui.clearMessageArea();
-      return this.handlePromise(world.tryPlayerMove(dx, dy));
-    }
+    this.ui.clearMessageArea();
+    return this.handlePromise(world.tryPlayerMove(dx, dy));
   }
 
   async load() {
@@ -632,7 +658,7 @@ class GameViewer extends CanvasViewer {
 
 module.exports = GameViewer;
 
-},{"./canvasviewer.js":3,"./database.js":4,"./htmlutil.js":7,"./monster.js":11,"./newgame.js":13,"./terrain.js":20,"./world.js":23}],7:[function(require,module,exports){
+},{"./assert.js":2,"./canvasviewer.js":3,"./database.js":4,"./event-handler.js":5,"./htmlutil.js":8,"./monster.js":12,"./newgame.js":14,"./terrain.js":21,"./world.js":24}],8:[function(require,module,exports){
 'use strict';
 
 function makeSpan(className, text, color) {
@@ -655,7 +681,7 @@ function removeAllChildren(element) {
 exports.makeSpan = makeSpan;
 exports.removeAllChildren = removeAllChildren;
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 'use strict';
 
 function loadImage(url) {
@@ -721,7 +747,7 @@ async function loadImageSizes(url) {
 exports.loadImage = loadImage;
 exports.loadImageSizes = loadImageSizes;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict';
 
 const GameViewer = require('./gameviewer.js');
@@ -733,7 +759,7 @@ const gameViewer = new GameViewer(canvas, messageArea, statusArea);
 gameViewer.redrawOnWindowResize();
 gameViewer.redraw().then(console.log, console.error);
 
-},{"./gameviewer.js":6}],10:[function(require,module,exports){
+},{"./gameviewer.js":7}],11:[function(require,module,exports){
 'use strict';
 
 const xyMask = (1<<16)-1;
@@ -742,7 +768,7 @@ exports.getIdFromXY = (x, y) => (x << 16) | (y & xyMask);
 exports.getXFromId = xy => (xy >> 16);
 exports.getYFromId = xy => ((xy << 16) >> 16);
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 'use strict';
 
 const {loadImageSizes} = require('./imgutil.js');
@@ -1004,7 +1030,7 @@ registerClass(Monster, 20);
 
 module.exports = Monster;
 
-},{"./animation.js":1,"./assert.js":2,"./game-object.js":5,"./imgutil.js":8,"./monstertype.js":12,"./path-finder.js":14,"./pickle.js":16,"./randutil.js":18,"./terrain.js":20,"./textutil.js":22,"./world.js":23}],12:[function(require,module,exports){
+},{"./animation.js":1,"./assert.js":2,"./game-object.js":6,"./imgutil.js":9,"./monstertype.js":13,"./path-finder.js":15,"./pickle.js":17,"./randutil.js":19,"./terrain.js":21,"./textutil.js":23,"./world.js":24}],13:[function(require,module,exports){
 'use strict';
 
 module.exports = [
@@ -1019,7 +1045,7 @@ module.exports = [
 }
 ];
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 'use strict';
 
 const {terrainTypes} = require('./terrain.js');
@@ -1060,7 +1086,7 @@ function newGame() {
 
 module.exports = newGame;
 
-},{"./monster.js":11,"./randutil.js":18,"./terrain.js":20,"./world.js":23}],14:[function(require,module,exports){
+},{"./monster.js":12,"./randutil.js":19,"./terrain.js":21,"./world.js":24}],15:[function(require,module,exports){
 'use strict';
 
 const pqueue = require('./pqueue.js');
@@ -1178,7 +1204,7 @@ class PathFinder {
 
 module.exports = PathFinder;
 
-},{"./indexutil.js":10,"./pqueue.js":17}],15:[function(require,module,exports){
+},{"./indexutil.js":11,"./pqueue.js":18}],16:[function(require,module,exports){
 'use strict';
 
 function zeroCrossing(x1, y1, x2, y2) {
@@ -1297,7 +1323,7 @@ const fovTree = new FovTree(0, 0, initialBeam);
 
 exports.fovTree = fovTree;
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 const assert = require('./assert.js');
@@ -1331,7 +1357,7 @@ exports.registerClass = registerClass;
 exports.pickle = pickle;
 exports.unpickle = unpickle;
 
-},{"./assert.js":2}],17:[function(require,module,exports){
+},{"./assert.js":2}],18:[function(require,module,exports){
 'use strict';
 
 function swap(pq, i, j) {
@@ -1418,7 +1444,7 @@ exports.insert = insert;
 exports.remove = remove;
 exports.test = test;
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict';
 
 function randomInt(n) {
@@ -1445,7 +1471,7 @@ exports.randomInt = randomInt;
 exports.randomStep = randomStep;
 exports.randomRange = randomRange;
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 const {getIdFromXY} = require('./indexutil.js');
@@ -1511,7 +1537,7 @@ class TerrainGrid {
 
 module.exports = TerrainGrid;
 
-},{"./indexutil.js":10,"./terrain.js":20}],20:[function(require,module,exports){
+},{"./indexutil.js":11,"./terrain.js":21}],21:[function(require,module,exports){
 'use strict';
 
 const {loadImageSizes} = require('./imgutil.js');
@@ -1557,7 +1583,7 @@ exports.terrainList = terrainList;
 exports.loadImages = loadImages;
 exports.awaitPromises = awaitPromises;
 
-},{"./imgutil.js":8,"./terraintype.js":21}],21:[function(require,module,exports){
+},{"./imgutil.js":9,"./terraintype.js":22}],22:[function(require,module,exports){
 'use strict';
 
 module.exports = [
@@ -1591,7 +1617,7 @@ module.exports = [
 }
 ];
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict';
 
 function toTitleCase(str) {
@@ -1604,7 +1630,7 @@ function toTitleCase(str) {
 
 exports.toTitleCase = toTitleCase;
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 
 const permissiveFov = require("./permissive-fov.js");
@@ -1936,4 +1962,4 @@ class World {
 
 module.exports = new World();
 
-},{"./assert.js":2,"./database.js":4,"./indexutil.js":10,"./permissive-fov.js":15,"./pickle.js":16,"./pqueue.js":17,"./terrain-grid.js":19,"./terrain.js":20}]},{},[9]);
+},{"./assert.js":2,"./database.js":4,"./indexutil.js":11,"./permissive-fov.js":16,"./pickle.js":17,"./pqueue.js":18,"./terrain-grid.js":20,"./terrain.js":21}]},{},[10]);

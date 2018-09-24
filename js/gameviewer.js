@@ -8,35 +8,8 @@ const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
 const {makeSpan, removeAllChildren} = require('./htmlutil.js');
-
-const keyToDirection = {
-  "h": [-1, 0],
-  "j": [0, 1],
-  "k": [0, -1],
-  "l": [1, 0],
-  "ArrowLeft": [-1, 0],
-  "ArrowRight": [1, 0],
-  "ArrowUp": [0, -1],
-  "ArrowDown": [0, 1],
-  // non-standard Edge names
-  "Left": [-1, 0],
-  "Right": [1, 0],
-  "Up": [0, -1],
-  "Down": [0, 1],
-  "b": [-1, 1],
-  "n": [1, 1],
-  "y": [-1, -1],
-  "u": [1, -1],
-
-  "1": [-1, -1],
-  "2": [0, -1],
-  "3": [1, -1],
-  "4": [-1, 0],
-  "6": [1, 0],
-  "7": [-1, 1],
-  "8": [0, 1],
-  "9": [1, 1]
-};
+const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
+const assert = require('./assert.js');
 
 class Message {
   constructor(message, color, hp) {
@@ -181,22 +154,24 @@ class UserInterface {
 class GameViewer extends CanvasViewer {
   constructor(canvas, messageArea, statusArea) {
     super(canvas);
-    this.blocked = false;
+    this.eventHandlers = [new ActiveEventHandler(this)];
     this.animation = null;
     const dpi = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     this.dpi = dpi;
     this.tileSize = 8*Math.round(dpi*5);
     this.ui = world.ui = new UserInterface(this, messageArea, statusArea);
-    document.addEventListener('keydown', (evt) => this.onkeydown(evt), false);
-    canvas.addEventListener('click', (evt) => this.onclick(evt), false);
+    document.addEventListener('keydown', (evt) => this.eventHandler().onkeydown(evt), false);
+    canvas.addEventListener('click', (evt) => this.eventHandler().onclick(evt), false);
   }
 
+  eventHandler() { return this.eventHandlers[this.eventHandlers.length-1]; }
+
   isBlocked() {
-    return this.blocked || !world.player || world.player.dead;
+    return !this.eventHandler().isActive() || !world.player || world.player.dead;
   }
 
   async handlePromise(promise) {
-    this.blocked = true;
+    this.eventHandlers.push(blockedEventHandler);
     try {
       await promise;
       await world.runSchedule();
@@ -207,48 +182,14 @@ class GameViewer extends CanvasViewer {
     } catch (err) {
       console.error(err);
     } finally {
-      this.blocked = false;
+      assert(this.eventHandlers.pop() === blockedEventHandler);
       this.redraw();
-    }
-  }
-
-  onkeydown(evt) {
-    const direction = keyToDirection[evt.key];
-    if (direction) {
-      const [dx, dy] = direction;
-      this.playerMove(dx, dy);
-    } else if (evt.key === '+') {
-      this.tileSize = Math.min(96, this.tileSize + 8);
-      this.redraw();
-    } else if (evt.key === '-') {
-      this.tileSize = Math.max(32, this.tileSize - 8);
-      this.redraw();
-    }
-  }
-
-  onclick(evt) {
-    const [x, y] = this.getMousePos(evt);
-
-    const tileSize = this.tileSize;
-    const borderSize = 2;
-    const fullTileSize = tileSize + borderSize;
-    const canvas = this.canvas;
-
-    const cx = (canvas.width - fullTileSize) >> 1;
-    const cy = (canvas.height - fullTileSize) >> 1;
-
-    const tileX = Math.floor((x - cx)/fullTileSize);
-    const tileY = Math.floor((y - cy)/fullTileSize);
-    if ((Math.abs(tileX) <= 1) && (Math.abs(tileY) <= 1) && ((tileX !== 0) || (tileY !== 0))) {
-      this.playerMove(tileX, tileY);
     }
   }
 
   playerMove(dx, dy) {
-    if (!this.isBlocked()) {
-      this.ui.clearMessageArea();
-      return this.handlePromise(world.tryPlayerMove(dx, dy));
-    }
+    this.ui.clearMessageArea();
+    return this.handlePromise(world.tryPlayerMove(dx, dy));
   }
 
   async load() {

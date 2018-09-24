@@ -421,7 +421,8 @@ class StatusArea {
         hp: player.getHp(),
         maxHp: player.monsterType.maxHp,
         dead: player.dead,
-        depth: player.y
+        depth: player.y,
+        maxDepth: player.monsterType.maxDepth
       };
     } else {
       return null;
@@ -443,6 +444,10 @@ class StatusArea {
     return true;
   }
 
+  addSpan(...args) {
+    this.statusArea.appendChild(makeSpan(...args));
+  }
+
   update() {
     const state = StatusArea.getState();
     if (StatusArea.isStateEqual(this.state, state)) {
@@ -461,10 +466,11 @@ class StatusArea {
         break;
       }
     }
-    statusArea.appendChild(makeSpan('status-span', `HP: ${state.hp}/${state.maxHp}`, hpColor));
-    statusArea.appendChild(makeSpan('status-span', `Depth: ${state.depth}`, 'white'));
+    this.addSpan('status-span', `HP: ${state.hp}/${state.maxHp}`, hpColor);
+    const depthColor = (state.depth <= state.maxDepth) ? 'chartreuse' : 'red';
+    this.addSpan('status-span', `Depth: ${state.depth}/${state.maxDepth}`, depthColor);
     if (state.dead) {
-      statusArea.appendChild(makeSpan('status-span', 'Dead', 'red'));
+      this.addSpan('status-span', 'Dead', 'red');
     }
   }
 }
@@ -792,6 +798,7 @@ function makeMonsterType(id, json) {
    baseDelay: 6,
    intelligence: 10,
    hpRecovery: 1/24,
+   maxDepth: Infinity,
    images: null
   };
   Object.assign(result, json);
@@ -1037,6 +1044,7 @@ module.exports = [
 {
   name: 'submarine',
   maxHp: 20,
+  maxDepth: 10
 },
 {
   name: 'squid',

@@ -127,6 +127,7 @@ class Monster extends GameObject {
   setDirection(dx) {
     if (dx !== 0) {
       this.direction = (dx > 0);
+      this.markDirty();
     }
   }
 
@@ -153,7 +154,32 @@ class Monster extends GameObject {
     }
   }
 
-  doAttack(victim) {
+  async doDamage(hp) {
+    const newHp = Math.max(0, this.getHp() - hp);
+    this.baseHp = newHp;
+    this.baseHpTime = world.time;
+    this.markDirty();
+    if (newHp === 0) {
+      this.dead = true;
+      if (this.isPlayer()) {
+        world.ui.message('You die.', 'red');
+        world.ui.updateStatusArea();
+      } else {
+        if (world.isVisible(this.x, this.y)) {
+          const time = world.ui.now();
+          await world.ui.animate(
+              new animation.ObjectAnimation(
+                this,
+                new animation.State(time, this.x, this.y, 1),
+                new animation.State(time+100, this.x, this.y, 0)));
+          world.ui.message(`${toTitleCase(this.theName())} dies.`);
+        }
+        this.basicUnplace();
+      }
+    }
+  }
+
+  async doAttack(victim) {
     assert(!this.waiting);
     const oldVisible = world.isVisible(this.x, this.y);
     const newVisible = world.isVisible(victim.x, victim.y);
@@ -164,15 +190,14 @@ class Monster extends GameObject {
       const time = world.ui.now();
       world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`, 
           this.isPlayer() ? 'chartreuse' : 'red', hp);
-      return world.ui.animate(
+      await world.ui.animate(
           new animation.ObjectAnimation(
             this,
             new animation.State(time, this.x, this.y, oldVisible|0),
             new animation.State(time+100, victim.x, victim.y, newVisible|0),
             {sfunc: animation.bump, animatePlayer: false}));
-    } else {
-      return dummyPromise;
     }
+    return victim.doDamage(hp);
   }
 
   isPlayer() {
@@ -185,7 +210,7 @@ class Monster extends GameObject {
 
   target() {
     const player = world.player;
-    if (player.isPlaced) {
+    if (player.isPlaced && !player.dead) {
       return player;
     } else {
       return null;

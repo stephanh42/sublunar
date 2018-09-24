@@ -175,6 +175,10 @@ class GameViewer extends CanvasViewer {
     canvas.addEventListener('click', (evt) => this.onclick(evt), false);
   }
 
+  isBlocked() {
+    return this.blocked || !world.player || world.player.dead; 
+  }
+
   async handlePromise(promise) {
     this.blocked = true;
     try {
@@ -225,7 +229,7 @@ class GameViewer extends CanvasViewer {
   }
 
   playerMove(dx, dy) {
-    if (!this.blocked) {
+    if (!this.isBlocked()) {
       this.ui.clearMessageArea();
       return this.handlePromise(world.tryPlayerMove(dx, dy));
     }
@@ -323,7 +327,7 @@ class GameViewer extends CanvasViewer {
         ctx.globalAlpha = 1;
       }
     }
-    if (!this.blocked) {
+    if (!this.isBlocked()) {
       ctx.strokeStyle = '#FFFFFF';
       ctx.setLineDash([4, 4]);
       ctx.beginPath();

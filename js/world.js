@@ -96,7 +96,7 @@ function unpickleWithLocation(x, y, obj) {
   return obj;
 }
 
-const gameVersion = 4;
+const gameVersion = 5;
 
 class World {
   constructor() {
@@ -259,7 +259,7 @@ class World {
   async runSchedule() {
     const player = this.player;
     const schedule = this.schedule;
-    while (player.waiting) {
+    while (player.waiting && !player.dead) {
       const action = pqueue.remove(schedule);
       assert(action);
       this.time = action.time;
@@ -306,14 +306,16 @@ class World {
 
   saveGame({clearAll=false}={}) {
     return new Promise((resolve, reject) => {
+      const dead = this.player && this.player.dead;
       const transaction = this.database.transaction(database.objectStores, 'readwrite');
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(new Error('Transaction aborted'));
       transaction.oncomplete = () => { this.markNonDirty(); resolve(); };
-      if (clearAll) {
+      if (clearAll || dead) {
         for (const objectStore of database.objectStores) {
-          transaction.objectStore(objectStore).clear();
+        transaction.objectStore(objectStore).clear();
         }
+        if (dead) { return; }
       }
       transaction.objectStore('game').put(this.getGlobalData(), 1);
       const gameObjectsStore = transaction.objectStore('game-objects');

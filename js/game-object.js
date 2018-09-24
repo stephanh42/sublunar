@@ -44,6 +44,13 @@ class GameObject {
     }
   }
 
+  updateIfPlayer() {
+    if (this === world.player) {
+      world.updateVisible();
+      world.ui.updateStatusArea();
+    }  
+  }
+
   basicMove(x, y) {
     if (this.isPlaced) {
       this.markDirty();
@@ -54,9 +61,17 @@ class GameObject {
     this.isPlaced = true;
     world.setGameObject(x, y, this);
     this.markDirty();
-    if (this === world.player) {
-      world.updateVisible();
-      world.ui.updateStatusArea();
+    this.updateIfPlayer();
+  }
+
+  basicUnplace() {
+    if (this.isPlaced) {
+      this.markDirty();
+      world.deleteGameObject(this.x, this.y, this);
+      this.x = 0;
+      this.y = 0;
+      this.isPlaced = false;
+      this.updateIfPlayer();
     }
   }
 

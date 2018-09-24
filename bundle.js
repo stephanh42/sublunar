@@ -206,6 +206,13 @@ class GameObject {
     }
   }
 
+  updateIfPlayer() {
+    if (this === world.player) {
+      world.updateVisible();
+      world.ui.updateStatusArea();
+    }  
+  }
+
   basicMove(x, y) {
     if (this.isPlaced) {
       this.markDirty();
@@ -216,9 +223,17 @@ class GameObject {
     this.isPlaced = true;
     world.setGameObject(x, y, this);
     this.markDirty();
-    if (this === world.player) {
-      world.updateVisible();
-      world.ui.updateStatusArea();
+    this.updateIfPlayer();
+  }
+
+  basicUnplace() {
+    if (this.isPlaced) {
+      this.markDirty();
+      world.deleteGameObject(this.x, this.y, this);
+      this.x = 0;
+      this.y = 0;
+      this.isPlaced = false;
+      this.updateIfPlayer();
     }
   }
 
@@ -431,6 +446,10 @@ class GameViewer extends CanvasViewer {
     canvas.addEventListener('click', (evt) => this.onclick(evt), false);
   }
 
+  isBlocked() {
+    return this.blocked || !world.player || world.player.dead; 
+  }
+
   async handlePromise(promise) {
     this.blocked = true;
     try {
@@ -481,7 +500,7 @@ class GameViewer extends CanvasViewer {
   }
 
   playerMove(dx, dy) {
-    if (!this.blocked) {
+    if (!this.isBlocked()) {
       this.ui.clearMessageArea();
       return this.handlePromise(world.tryPlayerMove(dx, dy));
     }
@@ -579,7 +598,7 @@ class GameViewer extends CanvasViewer {
         ctx.globalAlpha = 1;
       }
     }
-    if (!this.blocked) {
+    if (!this.isBlocked()) {
       ctx.strokeStyle = '#FFFFFF';
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -777,6 +796,9 @@ class Monster extends GameObject {
   get direction() { return this.getFlag(2); }
   set direction(flag) { this.setFlag(2, flag); }
 
+  get dead() { return this.getFlag(3); }
+  set dead(flag) { this.setFlag(3, flag); }
+
   pickleData() {
     const json = super.pickleData();
     json.mt = this.monsterType.id;
@@ -793,6 +815,9 @@ class Monster extends GameObject {
   }
 
   getHp() {
+    if (this.dead) {
+      return 0;
+    }
     const dt = world.time - this.baseHpTime;
     const hp = (this.baseHp + dt * this.monsterType.hpRecovery)|0;
     return Math.max(0, Math.min(this.monsterType.maxHp, hp));
@@ -826,6 +851,7 @@ class Monster extends GameObject {
   setDirection(dx) {
     if (dx !== 0) {
       this.direction = (dx > 0);
+      this.markDirty();
     }
   }
 
@@ -852,7 +878,32 @@ class Monster extends GameObject {
     }
   }
 
-  doAttack(victim) {
+  async doDamage(hp) {
+    const newHp = Math.max(0, this.getHp() - hp);
+    this.baseHp = newHp;
+    this.baseHpTime = world.time;
+    this.markDirty();
+    if (newHp === 0) {
+      this.dead = true;
+      if (this.isPlayer()) {
+        world.ui.message('You die.', 'red');
+        world.ui.updateStatusArea();
+      } else {
+        if (world.isVisible(this.x, this.y)) {
+          const time = world.ui.now();
+          await world.ui.animate(
+              new animation.ObjectAnimation(
+                this,
+                new animation.State(time, this.x, this.y, 1),
+                new animation.State(time+100, this.x, this.y, 0)));
+          world.ui.message(`${toTitleCase(this.theName())} dies.`);
+        }
+        this.basicUnplace();
+      }
+    }
+  }
+
+  async doAttack(victim) {
     assert(!this.waiting);
     const oldVisible = world.isVisible(this.x, this.y);
     const newVisible = world.isVisible(victim.x, victim.y);
@@ -863,15 +914,14 @@ class Monster extends GameObject {
       const time = world.ui.now();
       world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`, 
           this.isPlayer() ? 'chartreuse' : 'red', hp);
-      return world.ui.animate(
+      await world.ui.animate(
           new animation.ObjectAnimation(
             this,
             new animation.State(time, this.x, this.y, oldVisible|0),
             new animation.State(time+100, victim.x, victim.y, newVisible|0),
             {sfunc: animation.bump, animatePlayer: false}));
-    } else {
-      return dummyPromise;
     }
+    return victim.doDamage(hp);
   }
 
   isPlayer() {
@@ -884,7 +934,7 @@ class Monster extends GameObject {
 
   target() {
     const player = world.player;
-    if (player.isPlaced) {
+    if (player.isPlaced && !player.dead) {
       return player;
     } else {
       return null;
@@ -1564,7 +1614,7 @@ function unpickleWithLocation(x, y, obj) {
   return obj;
 }
 
-const gameVersion = 4;
+const gameVersion = 5;
 
 class World {
   constructor() {
@@ -1727,7 +1777,7 @@ class World {
   async runSchedule() {
     const player = this.player;
     const schedule = this.schedule;
-    while (player.waiting) {
+    while (player.waiting && !player.dead) {
       const action = pqueue.remove(schedule);
       assert(action);
       this.time = action.time;
@@ -1774,14 +1824,16 @@ class World {
 
   saveGame({clearAll=false}={}) {
     return new Promise((resolve, reject) => {
+      const dead = this.player && this.player.dead;
       const transaction = this.database.transaction(database.objectStores, 'readwrite');
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(new Error('Transaction aborted'));
       transaction.oncomplete = () => { this.markNonDirty(); resolve(); };
-      if (clearAll) {
+      if (clearAll || dead) {
         for (const objectStore of database.objectStores) {
-          transaction.objectStore(objectStore).clear();
+        transaction.objectStore(objectStore).clear();
         }
+        if (dead) { return; }
       }
       transaction.objectStore('game').put(this.getGlobalData(), 1);
       const gameObjectsStore = transaction.objectStore('game-objects');

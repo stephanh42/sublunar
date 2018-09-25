@@ -13,7 +13,6 @@ const assert = require('./assert.js');
 
 const monsterTypes = {};
 const monsterList = [];
-const dummyPromise = Promise.resolve();
 
 function makeMonsterType(id, json) {
   const result = {
@@ -132,7 +131,7 @@ class Monster extends GameObject {
     }
   }
 
-  doMove(dx, dy) {
+  async doMove(dx, dy) {
     assert(!this.waiting, 'Monster is waiting');
     const xold = this.x;
     const yold = this.y;
@@ -150,8 +149,6 @@ class Monster extends GameObject {
             this,
             new animation.State(time, xold, yold, oldVisible|0),
             new animation.State(time+100, xnew, ynew, newVisible|0)));
-    } else {
-      return dummyPromise;
     }
   }
 

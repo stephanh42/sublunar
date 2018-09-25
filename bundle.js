@@ -1028,7 +1028,6 @@ class Monster extends GameObject {
 
   async checkDepth() {
     assert(this.isPlayer(), 'Non-player checks depth');
-    console.log('checkDepth');
     const maxDepth = this.monsterType.maxDepth;
     const depth = this.y;
     const badLuck = Math.min(1, Math.max(0, depth- maxDepth)/maxDepth);

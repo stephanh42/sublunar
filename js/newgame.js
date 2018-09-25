@@ -20,7 +20,7 @@ function randomWalk(n) {
     }
     for (;;) {
       const [xn, yn] = randomStep(x, y);
-      if ((yn >= 0) && (yn < 10)) {
+      if ((yn >= 0) && (yn < 20)) {
         x = xn; y = yn; break;
       }
     }
@@ -33,6 +33,7 @@ function newGame() {
   const player = new Monster(Monster.monsterTypes.submarine);
   world.player = player;
   player.basicMove(0, 0);
+  player.schedule(0, 'checkDepth');
   return world;
 }
 

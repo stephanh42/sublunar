@@ -133,7 +133,7 @@ class Monster extends GameObject {
   }
 
   doMove(dx, dy) {
-    assert(!this.waiting);
+    assert(!this.waiting, 'Monster is waiting');
     const xold = this.x;
     const yold = this.y;
     const xnew = xold + dx;
@@ -155,7 +155,7 @@ class Monster extends GameObject {
     }
   }
 
-  async doDamage(hp) {
+  async doDamage(hp, deadMessage) {
     const newHp = Math.max(0, this.getHp() - hp);
     this.baseHp = newHp;
     this.baseHpTime = world.time;
@@ -163,6 +163,9 @@ class Monster extends GameObject {
     if (newHp === 0) {
       this.dead = true;
       if (this.isPlayer()) {
+        if (deadMessage) {
+          world.ui.message(deadMessage, 'red');
+        }
         world.ui.message('You die.', 'red');
         world.ui.updateStatusArea();
       } else {
@@ -181,7 +184,7 @@ class Monster extends GameObject {
   }
 
   async doAttack(victim) {
-    assert(!this.waiting);
+    assert(!this.waiting, 'Monster is waiting, cannot attack');
     const oldVisible = world.isVisible(this.x, this.y);
     const newVisible = world.isVisible(victim.x, victim.y);
     const hp = randomRange(1, 4);
@@ -236,6 +239,20 @@ class Monster extends GameObject {
         }
       }
     }
+  }
+
+  async checkDepth() {
+    assert(this.isPlayer(), 'Non-player checks depth');
+    console.log('checkDepth');
+    const maxDepth = this.monsterType.maxDepth;
+    const depth = this.y;
+    const badLuck = Math.min(1, Math.max(0, depth- maxDepth)/maxDepth);
+    if (Math.random() < badLuck) {
+      const hp = randomRange(1, 3);
+      world.ui.message('The hull creaks ominously under the enormous pressure.', 'red', hp);
+      await this.doDamage(hp, 'A sudden rush of water enters the vessel.');
+    }
+    this.schedule(randomRange(5, 10), 'checkDepth');
   }
 
   static loadImages() {

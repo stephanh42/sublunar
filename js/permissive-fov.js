@@ -48,21 +48,21 @@ class Beam {
       const s = ray.atPoint(x, y);
       if (previousRay &&
           (((previousS < 0) && (s > 0)) || ((previousS > 0) && (s < 0)))) {
-	const splitRay = previousRay.zeroCrossing(previousS, ray, s);
-	negativeRays.push(splitRay);
-	zeroRays.push(splitRay);
-	positiveRays.push(splitRay);
+        const splitRay = previousRay.zeroCrossing(previousS, ray, s);
+        negativeRays.push(splitRay);
+        zeroRays.push(splitRay);
+        positiveRays.push(splitRay);
       }
       if (s < 0) {
-	negativeRays.push(ray);
-	hasNegative = true;
+        negativeRays.push(ray);
+        hasNegative = true;
       } else if (s > 0) {
-	positiveRays.push(ray);
-	hasPositive = true;
+        positiveRays.push(ray);
+        hasPositive = true;
       } else {
-	negativeRays.push(ray);
-	zeroRays.push(ray);
-	positiveRays.push(ray);
+        negativeRays.push(ray);
+        zeroRays.push(ray);
+        positiveRays.push(ray);
       }
       previousRay = ray;
       previousS = s;
@@ -103,10 +103,10 @@ class FovTree {
       const y = this.y;
       const splitBeams = this._beam.splitPoint(x+0.5, y+0.5);
       this._addChild(0, 1,
-	splitBeams.positive.splitPoint(x-0.5, y+0.5).negative);
+          splitBeams.positive.splitPoint(x-0.5, y+0.5).negative);
       this._addChild(1, 1, splitBeams.zero);
       this._addChild(1, 0,
-	splitBeams.negative.splitPoint(x+0.5, y-0.5).positive);
+          splitBeams.negative.splitPoint(x+0.5, y-0.5).positive);
     }
     return this._children;
   }

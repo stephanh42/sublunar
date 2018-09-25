@@ -14,7 +14,14 @@
     "semi": ["error", "always"],
     "eqeqeq": ["error", "always"],
     "strict": ["error", "global"],
-    "no-trailing-spaces": ["error"]
+    "no-trailing-spaces": ["error"],
+    "no-var": ["error"],
+    "prefer-const": ["error"],
+    "no-restricted-syntax": ["error", "ForInStatement"],
+    "brace-style": ["error", "1tbs", { "allowSingleLine": true }],
+    "camelcase": ["error", {"ignoreDestructuring": true}],
+    "no-tabs": ["error"],
+    "linebreak-style": ["error", "unix"]
   },
   "root": true
 }

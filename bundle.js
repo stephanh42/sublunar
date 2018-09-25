@@ -16,8 +16,7 @@ class State {
     this.opacity = opacity;
   }
 
-  interpolate(otherState, time, sfunc)
-  {
+  interpolate(otherState, time, sfunc) {
     let s = (time - this.time)/(otherState.time - this.time);
     s = sfunc(Math.max(0, Math.min(1, s)));
     return new State(time,
@@ -620,12 +619,12 @@ class GameViewer extends CanvasViewer {
         const wy = iy + py;
         const isVisible = world.isVisible(wx, wy);
         let anythingShown = false;
-	const terrain = world.getRememberedTerrain(wx, wy);
-	const imgs = terrain.images;
+        const terrain = world.getRememberedTerrain(wx, wy);
+        const imgs = terrain.images;
         if (imgs) {
           ctx.drawImage(imgs.get(tileSize), ix*fullTileSize, iy*fullTileSize);
           anythingShown = true;
-	}
+        }
         if (isVisible) {
           for (const gameObject  of world.getGameObjects(wx, wy)) {
             if (gameObject !== animationObject) {
@@ -1263,21 +1262,21 @@ class Beam {
       const s = ray.atPoint(x, y);
       if (previousRay &&
           (((previousS < 0) && (s > 0)) || ((previousS > 0) && (s < 0)))) {
-	const splitRay = previousRay.zeroCrossing(previousS, ray, s);
-	negativeRays.push(splitRay);
-	zeroRays.push(splitRay);
-	positiveRays.push(splitRay);
+        const splitRay = previousRay.zeroCrossing(previousS, ray, s);
+        negativeRays.push(splitRay);
+        zeroRays.push(splitRay);
+        positiveRays.push(splitRay);
       }
       if (s < 0) {
-	negativeRays.push(ray);
-	hasNegative = true;
+        negativeRays.push(ray);
+        hasNegative = true;
       } else if (s > 0) {
-	positiveRays.push(ray);
-	hasPositive = true;
+        positiveRays.push(ray);
+        hasPositive = true;
       } else {
-	negativeRays.push(ray);
-	zeroRays.push(ray);
-	positiveRays.push(ray);
+        negativeRays.push(ray);
+        zeroRays.push(ray);
+        positiveRays.push(ray);
       }
       previousRay = ray;
       previousS = s;
@@ -1318,10 +1317,10 @@ class FovTree {
       const y = this.y;
       const splitBeams = this._beam.splitPoint(x+0.5, y+0.5);
       this._addChild(0, 1,
-	splitBeams.positive.splitPoint(x-0.5, y+0.5).negative);
+          splitBeams.positive.splitPoint(x-0.5, y+0.5).negative);
       this._addChild(1, 1, splitBeams.zero);
       this._addChild(1, 0,
-	splitBeams.negative.splitPoint(x+0.5, y-0.5).positive);
+          splitBeams.negative.splitPoint(x+0.5, y-0.5).positive);
     }
     return this._children;
   }
@@ -1652,15 +1651,6 @@ const assert = require('./assert.js');
 const {terrainTypes} = require('./terrain.js');
 const TerrainGrid = require('./terrain-grid.js');
 
-const dummyPromise = Promise.resolve();
-
-class DummyUserInterface {
-  redraw() { return dummyPromise; }
-  animate() { return dummyPromise; }
-  now() { return 0.0; }
-  updateStatusArea() {}
-}
-
 const emptyArray = [];
 
 function getReference(gameObj) {
@@ -1693,7 +1683,7 @@ class World {
     this.time = 0;
     this.scheduleOrder = 0;
     this.schedule = [];
-    this.ui = new DummyUserInterface();
+    this.ui = null;
     this.database = null;
   }
 
@@ -1825,10 +1815,10 @@ class World {
     return true;
   }
 
-  tryPlayerMove(dx, dy) {
+  async tryPlayerMove(dx, dy) {
     const player = this.player;
     if (!player) {
-      return dummyPromise;
+      return;
     }
     const xnew = dx + player.x;
     const ynew = dy + player.y;
@@ -1838,8 +1828,6 @@ class World {
       const monster = this.getMonster(xnew, ynew);
       if (monster) {
         return player.doAttack(monster);
-      } else {
-        return dummyPromise;
       }
     }
   }

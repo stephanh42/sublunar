@@ -11,15 +11,6 @@ const assert = require('./assert.js');
 const {terrainTypes} = require('./terrain.js');
 const TerrainGrid = require('./terrain-grid.js');
 
-const dummyPromise = Promise.resolve();
-
-class DummyUserInterface {
-  redraw() { return dummyPromise; }
-  animate() { return dummyPromise; }
-  now() { return 0.0; }
-  updateStatusArea() {}
-}
-
 const emptyArray = [];
 
 function getReference(gameObj) {
@@ -52,7 +43,7 @@ class World {
     this.time = 0;
     this.scheduleOrder = 0;
     this.schedule = [];
-    this.ui = new DummyUserInterface();
+    this.ui = null;
     this.database = null;
   }
 
@@ -184,10 +175,10 @@ class World {
     return true;
   }
 
-  tryPlayerMove(dx, dy) {
+  async tryPlayerMove(dx, dy) {
     const player = this.player;
     if (!player) {
-      return dummyPromise;
+      return;
     }
     const xnew = dx + player.x;
     const ynew = dy + player.y;
@@ -197,8 +188,6 @@ class World {
       const monster = this.getMonster(xnew, ynew);
       if (monster) {
         return player.doAttack(monster);
-      } else {
-        return dummyPromise;
       }
     }
   }

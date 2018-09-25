@@ -259,12 +259,12 @@ class GameViewer extends CanvasViewer {
         const wy = iy + py;
         const isVisible = world.isVisible(wx, wy);
         let anythingShown = false;
-	const terrain = world.getRememberedTerrain(wx, wy);
-	const imgs = terrain.images;
+        const terrain = world.getRememberedTerrain(wx, wy);
+        const imgs = terrain.images;
         if (imgs) {
           ctx.drawImage(imgs.get(tileSize), ix*fullTileSize, iy*fullTileSize);
           anythingShown = true;
-	}
+        }
         if (isVisible) {
           for (const gameObject  of world.getGameObjects(wx, wy)) {
             if (gameObject !== animationObject) {

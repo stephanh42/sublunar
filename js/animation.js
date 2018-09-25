@@ -15,8 +15,7 @@ class State {
     this.opacity = opacity;
   }
 
-  interpolate(otherState, time, sfunc)
-  {
+  interpolate(otherState, time, sfunc) {
     let s = (time - this.time)/(otherState.time - this.time);
     s = sfunc(Math.max(0, Math.min(1, s)));
     return new State(time,

@@ -47,6 +47,17 @@ class Message {
   }
 }
 
+function colorFromFraction(fraction) {
+  let result = 'chartreuse';
+  for (const [limit, color] of [[0.25, 'red'], [0.5, 'orange'], [0.75, 'yellow']]) {
+    if (fraction <= limit) {
+      result = color;
+      break;
+    }
+  }
+  return result;
+}
+
 class StatusArea {
   constructor(statusArea) {
     this.statusArea = statusArea;
@@ -61,7 +72,8 @@ class StatusArea {
         maxHp: player.monsterType.maxHp,
         dead: player.dead,
         depth: player.y,
-        maxDepth: player.monsterType.maxDepth
+        maxDepth: player.monsterType.maxDepth,
+        airPercentage: world.airPercentage()
       };
     } else {
       return null;
@@ -98,16 +110,11 @@ class StatusArea {
     if (state === null) {
       return;
     }
-    let hpColor = 'chartreuse';
-    for (const [limit, color] of [[0.25, 'red'], [0.5, 'orange'], [0.75, 'yellow']]) {
-      if (state.hp <= limit * state.maxHp) {
-        hpColor = color;
-        break;
-      }
-    }
+    const hpColor = colorFromFraction(state.hp/state.maxHp);
     this.addSpan('status-span', `HP: ${state.hp}/${state.maxHp}`, hpColor);
     const depthColor = (state.depth <= state.maxDepth) ? 'chartreuse' : 'red';
     this.addSpan('status-span', `Depth: ${state.depth}/${state.maxDepth}`, depthColor);
+    this.addSpan('status-span', `Air: ${state.airPercentage}%`, colorFromFraction(state.airPercentage/100));
     if (state.dead) {
       this.addSpan('status-span', 'Dead', 'red');
     }

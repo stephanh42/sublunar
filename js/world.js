@@ -30,7 +30,7 @@ function unpickleWithLocation(x, y, obj) {
   return obj;
 }
 
-const gameVersion = 6;
+const gameVersion = 7;
 
 class World {
   constructor() {
@@ -45,6 +45,8 @@ class World {
     this.schedule = [];
     this.ui = null;
     this.database = null;
+    this.lastAirTime = 0;
+    this.airDuration = 0;
   }
 
   reset() {
@@ -57,6 +59,8 @@ class World {
     this.scheduleOrder = 0;
     this.schedule = [];
     this.player = null;
+    this.lastAirTime = 0;
+    this.airDuration = 600;
   }
 
   getTerrain(x, y) {
@@ -175,6 +179,18 @@ class World {
     return true;
   }
 
+  airPercentage() {
+    const dt = this.time - this.lastAirTime;
+    return Math.ceil(100*Math.max(0, this.airDuration - dt)/this.airDuration);
+  }
+
+  checkAir() {
+    const player = this.player;
+    if (player && (player.y <= 0)) {
+      this.lastAirTime = this.time;
+    }
+  }
+
   async tryPlayerMove(dx, dy) {
     const player = this.player;
     if (!player) {
@@ -199,6 +215,7 @@ class World {
       const action = pqueue.remove(schedule);
       assert(action);
       this.time = action.time;
+      this.checkAir();
       this.ui.updateStatusArea();
       const object = action.object;
       if (object && object.isPlaced) {
@@ -228,7 +245,9 @@ class World {
       time: this.time,
       scheduleOrder: this.scheduleOrder,
       schedule: this.schedule.map(pickleAction),
-      player: getReference(this.player)
+      player: getReference(this.player),
+      lastAirTime: this.lastAirTime,
+      airDuration: this.airDuration
     };
   }
 
@@ -238,6 +257,8 @@ class World {
     this.scheduleOrder = json.scheduleOrder;
     this.schedule = json.schedule.map(action => this.unpickleAction(action));
     this.player = this.resolveReference(json.player);
+    this.lastAirTime = json.lastAirTime;
+    this.airDuration = json.airDuration;
   }
 
   saveGame({clearAll=false}={}) {

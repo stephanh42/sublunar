@@ -561,8 +561,10 @@ class GameViewer extends CanvasViewer {
   }
 
   playerMove(dx, dy) {
-    this.ui.clearMessageArea();
-    return this.handlePromise(world.tryPlayerMove(dx, dy));
+    if (world.player && !world.player.dead) {
+      this.ui.clearMessageArea();
+      return this.handlePromise(world.tryPlayerMove(dx, dy));
+    }
   }
 
   async load() {

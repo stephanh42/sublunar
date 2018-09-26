@@ -12,6 +12,7 @@
   "rules": {
     "no-console": "off",
     "semi": ["error", "always"],
+    "no-extra-semi": ["error"],
     "eqeqeq": ["error", "always"],
     "strict": ["error", "global"],
     "no-trailing-spaces": ["error"],

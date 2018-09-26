@@ -11,9 +11,9 @@ You can try it [here](https://stephanh42.github.io/sublunar/).
 You can either use the traditional VI/Roguelike keys or the numpad keys.
 
 ```
-       y j u             1 2 3
+       y k u             1 2 3
        h   l             4   6
-       b k n             7 8 9
+       b j n             7 8 9
 
      traditional         numpad
     VI/Roguelike

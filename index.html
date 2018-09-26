@@ -22,16 +22,19 @@
       position: absolute;
     }
     .message-area, .status-area {
+      position: absolute;
       margin: 4px;
       border: 0;
-      position: absolute;
       color: white;
       background-color: rgba(0, 0, 0, 0.5);
      }
      .message-area {
-       width: 50%;
+       display: flex;              /* establish flex container */
+       flex-direction: column;     /* stack flex items vertically */
+       justify-content: center;    /* center items vertically, in this case */
+       align-items: center;        /* center items horizontally, in this case */
+       width: 100%;
        top: 25%;
-       left: 25%;
      }
      .status-area {
        width: 100%;
@@ -41,6 +44,7 @@
        margin-left: 4px;
        margin-right: 4px;
        font-size: x-large;
+       text-align: center;
      }
      .status-span {
        margin-left: 20px;

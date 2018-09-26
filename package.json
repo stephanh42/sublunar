@@ -12,8 +12,7 @@
     "run": "budo js/index.js:bundle.js",
     "build": "browserify js/index.js > bundle.js",
     "lint": "eslint js/*.js",
-    "stage": "npm run build && git add -v .",
-    "tags": "ctags js/*.js"
+    "stage": "npm run build && git add -v ."
   },
   "author": "Stephan Houben",
   "license": "MIT",

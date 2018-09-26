@@ -477,6 +477,7 @@ class UserInterface {
     this.messageArea = messageArea;
     this.statusArea = new StatusArea(statusArea);
     this.lastMessage = null;
+    messageArea.addEventListener('click', ()=>this.clearMessageArea());
   }
 
   redraw() {

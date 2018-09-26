@@ -1,6 +1,6 @@
 'use strict';
 
-const {loadImageSizes} = require('./imgutil.js');
+const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
 const {registerClass} = require('./pickle.js');
 const {randomInt, randomRange} = require('./randutil.js');
@@ -111,6 +111,13 @@ class Monster extends GameObject {
   draw(ctx, x, y, tileSize) {
     const img = this.monsterType.images.get(tileSize);
     drawImageDirection(ctx, img, x, y, this.direction);
+    const hpFraction = this.getHp()/this.monsterType.maxHp;
+    if (hpFraction < 1) {
+      const healthBarWidth = tileSize>>1;
+      const healthBarHeight = tileSize>>3;
+      const healthBar = healthBarDrawer.get(healthBarWidth, healthBarHeight, hpFraction);
+      ctx.drawImage(healthBar, x + tileSize - healthBarWidth - 1, y + tileSize - healthBarHeight - 1);
+    }
   }
 
   sleep(deltaTime) {

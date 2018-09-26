@@ -60,5 +60,44 @@ async function loadImageSizes(url) {
   return new ScaledImage(await p1, await p2);
 }
 
+function colorFromFraction(fraction) {
+  if (fraction < 0.5) {
+    return `rgb(255, ${Math.round(255*2*fraction)}, 0)`;
+  } else {
+    return `rgb(${Math.round(255*2*(1-fraction))}, 255, 0)`;
+  }
+}
+
+class HealthBarDrawer {
+  constructor() {
+    this.width = -1;
+    this.height = -1;
+    this.cachedImages = new Map();
+  }
+
+  get(width, height, healthFraction) {
+    const barWidth = Math.round(healthFraction * (width - 2));
+    if ((this.width !== width) || (this.height !== height)) {
+      this.width = width;
+      this.height = height;
+      this.cachedImages.clear();
+    }
+    let img = this.cachedImages.get(barWidth);
+    if (!img) {
+      img = createCanvas(width, height);
+      const ctx = img.getContext('2d');
+      ctx.fillStyle = '#303030';
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = colorFromFraction(barWidth / (width-2));
+      ctx.fillRect(1, 1, barWidth, height-2);
+
+      this.cachedImages.set(barWidth, img);
+    }
+    return img;
+  }
+}
+
 exports.loadImage = loadImage;
 exports.loadImageSizes = loadImageSizes;
+exports.colorFromFraction = colorFromFraction;
+exports.healthBarDrawer = new HealthBarDrawer();

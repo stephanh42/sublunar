@@ -369,6 +369,7 @@ const world = require('./world.js');
 const newgame = require('./newgame.js');
 const {makeSpan, removeAllChildren} = require('./htmlutil.js');
 const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
+const {colorFromFraction} = require('./imgutil.js');
 const assert = require('./assert.js');
 
 class Message {
@@ -405,17 +406,6 @@ class Message {
       return false;
     }
   }
-}
-
-function colorFromFraction(fraction) {
-  let result = 'chartreuse';
-  for (const [limit, color] of [[0.25, 'red'], [0.5, 'orange'], [0.75, 'yellow']]) {
-    if (fraction <= limit) {
-      result = color;
-      break;
-    }
-  }
-  return result;
 }
 
 class StatusArea {
@@ -672,7 +662,7 @@ class GameViewer extends CanvasViewer {
 
 module.exports = GameViewer;
 
-},{"./assert.js":2,"./canvasviewer.js":3,"./database.js":4,"./event-handler.js":5,"./htmlutil.js":8,"./monster.js":12,"./newgame.js":14,"./terrain.js":21,"./world.js":24}],8:[function(require,module,exports){
+},{"./assert.js":2,"./canvasviewer.js":3,"./database.js":4,"./event-handler.js":5,"./htmlutil.js":8,"./imgutil.js":9,"./monster.js":12,"./newgame.js":14,"./terrain.js":21,"./world.js":24}],8:[function(require,module,exports){
 'use strict';
 
 function makeSpan(className, text, color) {
@@ -758,8 +748,47 @@ async function loadImageSizes(url) {
   return new ScaledImage(await p1, await p2);
 }
 
+function colorFromFraction(fraction) {
+  if (fraction < 0.5) {
+    return `rgb(255, ${Math.round(255*2*fraction)}, 0)`;
+  } else {
+    return `rgb(${Math.round(255*2*(1-fraction))}, 255, 0)`;
+  }
+}
+
+class HealthBarDrawer {
+  constructor() {
+    this.width = -1;
+    this.height = -1;
+    this.cachedImages = new Map();
+  }
+
+  get(width, height, healthFraction) {
+    const barWidth = Math.round(healthFraction * (width - 2));
+    if ((this.width !== width) || (this.height !== height)) {
+      this.width = width;
+      this.height = height;
+      this.cachedImages.clear();
+    }
+    let img = this.cachedImages.get(barWidth);
+    if (!img) {
+      img = createCanvas(width, height);
+      const ctx = img.getContext('2d');
+      ctx.fillStyle = '#303030';
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = colorFromFraction(barWidth / (width-2));
+      ctx.fillRect(1, 1, barWidth, height-2);
+
+      this.cachedImages.set(barWidth, img);
+    }
+    return img;
+  }
+}
+
 exports.loadImage = loadImage;
 exports.loadImageSizes = loadImageSizes;
+exports.colorFromFraction = colorFromFraction;
+exports.healthBarDrawer = new HealthBarDrawer();
 
 },{}],10:[function(require,module,exports){
 'use strict';
@@ -785,7 +814,7 @@ exports.getYFromId = xy => ((xy << 16) >> 16);
 },{}],12:[function(require,module,exports){
 'use strict';
 
-const {loadImageSizes} = require('./imgutil.js');
+const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
 const {registerClass} = require('./pickle.js');
 const {randomInt, randomRange} = require('./randutil.js');
@@ -896,6 +925,13 @@ class Monster extends GameObject {
   draw(ctx, x, y, tileSize) {
     const img = this.monsterType.images.get(tileSize);
     drawImageDirection(ctx, img, x, y, this.direction);
+    const hpFraction = this.getHp()/this.monsterType.maxHp;
+    if (hpFraction < 1) {
+      const healthBarWidth = tileSize>>1;
+      const healthBarHeight = tileSize>>3;
+      const healthBar = healthBarDrawer.get(healthBarWidth, healthBarHeight, hpFraction);
+      ctx.drawImage(healthBar, x + tileSize - healthBarWidth - 1, y + tileSize - healthBarHeight - 1);
+    }
   }
 
   sleep(deltaTime) {
@@ -1065,7 +1101,8 @@ module.exports = [
 {
   name: 'submarine',
   maxHp: 20,
-  maxDepth: 10
+  maxDepth: 10,
+  hpRecovery: 1/12,
 },
 {
   name: 'squid',

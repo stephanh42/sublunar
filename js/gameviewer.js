@@ -9,6 +9,7 @@ const world = require('./world.js');
 const newgame = require('./newgame.js');
 const {makeSpan, removeAllChildren} = require('./htmlutil.js');
 const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
+const {colorFromFraction} = require('./imgutil.js');
 const assert = require('./assert.js');
 
 class Message {
@@ -45,17 +46,6 @@ class Message {
       return false;
     }
   }
-}
-
-function colorFromFraction(fraction) {
-  let result = 'chartreuse';
-  for (const [limit, color] of [[0.25, 'red'], [0.5, 'orange'], [0.75, 'yellow']]) {
-    if (fraction <= limit) {
-      result = color;
-      break;
-    }
-  }
-  return result;
 }
 
 class StatusArea {

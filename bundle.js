@@ -367,7 +367,7 @@ const Monster = require('./monster.js');
 const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
-const {makeSpan, removeAllChildren} = require('./htmlutil.js');
+const {makeElement, makeSpan, removeAllChildren} = require('./htmlutil.js');
 const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
 const {colorFromFraction} = require('./imgutil.js');
 const assert = require('./assert.js');
@@ -381,16 +381,16 @@ class Message {
   }
 
   makeElement() {
-    const span = makeSpan('message-span', this.message, this.color);
+    const div = makeElement('div', 'message-span', this.message, this.color);
     if (this.repeat > 1) {
       const span2 = makeSpan(null, ` [${this.repeat}x]`, 'white');
-      span.appendChild(span2);
+      div.appendChild(span2);
     }
     if (this.hp !== 0) {
       const span2 = makeSpan(null, ` (${this.hp} HP)`, 'yellow');
-      span.appendChild(span2);
+      div.appendChild(span2);
     }
-    return span;
+    return div;
   }
 
   tryCombine(otherMessage) {
@@ -462,11 +462,11 @@ class StatusArea {
     }
     const hpColor = colorFromFraction(state.hp/state.maxHp);
     this.addSpan('status-span', `HP: ${state.hp}/${state.maxHp}`, hpColor);
-    const depthColor = (state.depth <= state.maxDepth) ? 'chartreuse' : 'red';
+    const depthColor = (state.depth <= state.maxDepth) ? '#00ff00' : '#ff0000';
     this.addSpan('status-span', `Depth: ${state.depth}/${state.maxDepth}`, depthColor);
     this.addSpan('status-span', `Air: ${state.airPercentage}%`, colorFromFraction(state.airPercentage/100));
     if (state.dead) {
-      this.addSpan('status-span', 'Dead', 'red');
+      this.addSpan('status-span', 'Dead', '#ff0000');
     }
   }
 }
@@ -665,14 +665,18 @@ module.exports = GameViewer;
 },{"./assert.js":2,"./canvasviewer.js":3,"./database.js":4,"./event-handler.js":5,"./htmlutil.js":8,"./imgutil.js":9,"./monster.js":12,"./newgame.js":14,"./terrain.js":21,"./world.js":24}],8:[function(require,module,exports){
 'use strict';
 
-function makeSpan(className, text, color) {
-  const span = document.createElement('span');
+function makeElement(type, className, text, color) {
+  const span = document.createElement(type);
   if (className) {
     span.className = className;
   }
   span.style.color = color;
   span.appendChild(document.createTextNode(text));
   return span;
+}
+
+function makeSpan(...args) {
+  return makeElement('span', ...args);
 }
 
 function removeAllChildren(element) {
@@ -682,6 +686,7 @@ function removeAllChildren(element) {
   }
 }
 
+exports.makeElement = makeElement;
 exports.makeSpan = makeSpan;
 exports.removeAllChildren = removeAllChildren;
 
@@ -982,9 +987,9 @@ class Monster extends GameObject {
       this.dead = true;
       if (this.isPlayer()) {
         if (deadMessage) {
-          world.ui.message(deadMessage, 'red');
+          world.ui.message(deadMessage, '#ff0000');
         }
-        world.ui.message('You die.', 'red');
+        world.ui.message('You die.', '#ff0000');
         world.ui.updateStatusArea();
       } else {
         if (world.isVisible(this.x, this.y)) {
@@ -1011,7 +1016,7 @@ class Monster extends GameObject {
     if (oldVisible || newVisible) {
       const time = world.ui.now();
       world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
-          this.isPlayer() ? 'chartreuse' : 'red', hp);
+          this.isPlayer() ? '#00ff00' : '#ff0000', hp);
       await world.ui.animate(
           new animation.ObjectAnimation(
             this,
@@ -1066,7 +1071,7 @@ class Monster extends GameObject {
     const badLuck = Math.min(1, Math.max(0, depth- maxDepth)/maxDepth);
     if (Math.random() < badLuck) {
       const hp = randomRange(1, 3);
-      world.ui.message('The hull creaks ominously under the enormous pressure.', 'red', hp);
+      world.ui.message('The hull creaks ominously under the enormous pressure.', '#ff0000', hp);
       await this.doDamage(hp, 'A sudden rush of water enters the vessel.');
     }
     this.schedule(randomRange(5, 10), 'checkDepth');
@@ -1884,10 +1889,24 @@ class World {
     return Math.ceil(100*Math.max(0, this.airDuration - dt)/this.airDuration);
   }
 
-  checkAir() {
+  async checkAir(oldAirPercentage) {
     const player = this.player;
-    if (player && (player.y <= 0)) {
+    if (!player) {
+      return;
+    }
+    if (player.y <= 0) {
       this.lastAirTime = this.time;
+    }
+    const airPercentage = this.airPercentage();
+    if (airPercentage === 0) {
+      return player.doDamage(Infinity, 'You suffocate as you run out of air.');
+    } else {
+      for (const [limit, message] of [[50, 'Air getting low.'], [25, 'WARNING: low on air.'], [10, 'PANIC: almost out of air.']]) {
+        if ((oldAirPercentage > limit) && (airPercentage <= limit)) {
+          this.ui.message(message, '#ff0000');
+          break;
+        }
+      }
     }
   }
 
@@ -1914,8 +1933,9 @@ class World {
     while (player.waiting && !player.dead) {
       const action = pqueue.remove(schedule);
       assert(action);
+      const oldAirPercentage = this.airPercentage();
       this.time = action.time;
-      this.checkAir();
+      await this.checkAir(oldAirPercentage);
       this.ui.updateStatusArea();
       const object = action.object;
       if (object && object.isPlaced) {

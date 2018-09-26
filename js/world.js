@@ -184,10 +184,24 @@ class World {
     return Math.ceil(100*Math.max(0, this.airDuration - dt)/this.airDuration);
   }
 
-  checkAir() {
+  async checkAir(oldAirPercentage) {
     const player = this.player;
-    if (player && (player.y <= 0)) {
+    if (!player) {
+      return;
+    }
+    if (player.y <= 0) {
       this.lastAirTime = this.time;
+    }
+    const airPercentage = this.airPercentage();
+    if (airPercentage === 0) {
+      return player.doDamage(Infinity, 'You suffocate as you run out of air.');
+    } else {
+      for (const [limit, message] of [[50, 'Air getting low.'], [25, 'WARNING: low on air.'], [10, 'PANIC: almost out of air.']]) {
+        if ((oldAirPercentage > limit) && (airPercentage <= limit)) {
+          this.ui.message(message, '#ff0000');
+          break;
+        }
+      }
     }
   }
 
@@ -214,8 +228,9 @@ class World {
     while (player.waiting && !player.dead) {
       const action = pqueue.remove(schedule);
       assert(action);
+      const oldAirPercentage = this.airPercentage();
       this.time = action.time;
-      this.checkAir();
+      await this.checkAir(oldAirPercentage);
       this.ui.updateStatusArea();
       const object = action.object;
       if (object && object.isPlaced) {

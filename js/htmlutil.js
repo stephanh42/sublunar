@@ -1,13 +1,17 @@
 'use strict';
 
-function makeSpan(className, text, color) {
-  const span = document.createElement('span');
+function makeElement(type, className, text, color) {
+  const span = document.createElement(type);
   if (className) {
     span.className = className;
   }
   span.style.color = color;
   span.appendChild(document.createTextNode(text));
   return span;
+}
+
+function makeSpan(...args) {
+  return makeElement('span', ...args);
 }
 
 function removeAllChildren(element) {
@@ -17,5 +21,6 @@ function removeAllChildren(element) {
   }
 }
 
+exports.makeElement = makeElement;
 exports.makeSpan = makeSpan;
 exports.removeAllChildren = removeAllChildren;

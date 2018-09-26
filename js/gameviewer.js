@@ -7,7 +7,7 @@ const Monster = require('./monster.js');
 const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
-const {makeSpan, removeAllChildren} = require('./htmlutil.js');
+const {makeElement, makeSpan, removeAllChildren} = require('./htmlutil.js');
 const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
 const {colorFromFraction} = require('./imgutil.js');
 const assert = require('./assert.js');
@@ -21,16 +21,16 @@ class Message {
   }
 
   makeElement() {
-    const span = makeSpan('message-span', this.message, this.color);
+    const div = makeElement('div', 'message-span', this.message, this.color);
     if (this.repeat > 1) {
       const span2 = makeSpan(null, ` [${this.repeat}x]`, 'white');
-      span.appendChild(span2);
+      div.appendChild(span2);
     }
     if (this.hp !== 0) {
       const span2 = makeSpan(null, ` (${this.hp} HP)`, 'yellow');
-      span.appendChild(span2);
+      div.appendChild(span2);
     }
-    return span;
+    return div;
   }
 
   tryCombine(otherMessage) {
@@ -102,11 +102,11 @@ class StatusArea {
     }
     const hpColor = colorFromFraction(state.hp/state.maxHp);
     this.addSpan('status-span', `HP: ${state.hp}/${state.maxHp}`, hpColor);
-    const depthColor = (state.depth <= state.maxDepth) ? 'chartreuse' : 'red';
+    const depthColor = (state.depth <= state.maxDepth) ? '#00ff00' : '#ff0000';
     this.addSpan('status-span', `Depth: ${state.depth}/${state.maxDepth}`, depthColor);
     this.addSpan('status-span', `Air: ${state.airPercentage}%`, colorFromFraction(state.airPercentage/100));
     if (state.dead) {
-      this.addSpan('status-span', 'Dead', 'red');
+      this.addSpan('status-span', 'Dead', '#ff0000');
     }
   }
 }

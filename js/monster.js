@@ -168,9 +168,9 @@ class Monster extends GameObject {
       this.dead = true;
       if (this.isPlayer()) {
         if (deadMessage) {
-          world.ui.message(deadMessage, 'red');
+          world.ui.message(deadMessage, '#ff0000');
         }
-        world.ui.message('You die.', 'red');
+        world.ui.message('You die.', '#ff0000');
         world.ui.updateStatusArea();
       } else {
         if (world.isVisible(this.x, this.y)) {
@@ -197,7 +197,7 @@ class Monster extends GameObject {
     if (oldVisible || newVisible) {
       const time = world.ui.now();
       world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
-          this.isPlayer() ? 'chartreuse' : 'red', hp);
+          this.isPlayer() ? '#00ff00' : '#ff0000', hp);
       await world.ui.animate(
           new animation.ObjectAnimation(
             this,
@@ -252,7 +252,7 @@ class Monster extends GameObject {
     const badLuck = Math.min(1, Math.max(0, depth- maxDepth)/maxDepth);
     if (Math.random() < badLuck) {
       const hp = randomRange(1, 3);
-      world.ui.message('The hull creaks ominously under the enormous pressure.', 'red', hp);
+      world.ui.message('The hull creaks ominously under the enormous pressure.', '#ff0000', hp);
       await this.doDamage(hp, 'A sudden rush of water enters the vessel.');
     }
     this.schedule(randomRange(5, 10), 'checkDepth');

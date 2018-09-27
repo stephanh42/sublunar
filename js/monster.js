@@ -9,6 +9,7 @@ const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
 const { toTitleCase } = require('./textutil.js');
+const { goodColor, badColor } = require('./htmlutil.js');
 const assert = require('./assert.js');
 
 const monsterTypes = {};
@@ -190,9 +191,9 @@ class Monster extends GameObject {
       this.dead = true;
       if (this.isPlayer()) {
         if (deadMessage) {
-          world.ui.message(deadMessage, '#ff0000');
+          world.ui.message(deadMessage, badColor);
         }
-        world.ui.message('You die.', '#ff0000');
+        world.ui.message('You die.', badColor);
         world.ui.updateStatusArea();
       } else {
         if (world.isVisible(this.x, this.y)) {
@@ -222,7 +223,7 @@ class Monster extends GameObject {
       const time = world.ui.now();
       world.ui.message(
         `${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
-        this.isPlayer() ? '#00ff00' : '#ff0000',
+        this.isPlayer() ? goodColor : badColor,
         hp
       );
       await world.ui.animate(
@@ -289,7 +290,7 @@ class Monster extends GameObject {
       const hp = randomRange(1, 3);
       world.ui.message(
         'The hull creaks ominously under the enormous pressure.',
-        '#ff0000',
+        badColor,
         hp
       );
       await this.doDamage(hp, 'A sudden rush of water enters the vessel.');

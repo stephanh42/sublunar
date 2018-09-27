@@ -386,7 +386,13 @@ const Monster = require('./monster.js');
 const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
-const { makeElement, makeSpan, removeAllChildren } = require('./htmlutil.js');
+const {
+  makeElement,
+  makeSpan,
+  removeAllChildren,
+  goodColor,
+  badColor
+} = require('./htmlutil.js');
 const {
   ActiveEventHandler,
   blockedEventHandler
@@ -469,8 +475,8 @@ class StatusArea {
     return true;
   }
 
-  addSpan(...args) {
-    this.statusArea.appendChild(makeSpan(...args));
+  addDiv(...args) {
+    this.statusArea.appendChild(makeElement('div', 'status-span', ...args));
   }
 
   update() {
@@ -485,20 +491,15 @@ class StatusArea {
       return;
     }
     const hpColor = colorFromFraction(state.hp / state.maxHp);
-    this.addSpan('status-span', `HP: ${state.hp}/${state.maxHp}`, hpColor);
-    const depthColor = state.depth <= state.maxDepth ? '#00ff00' : '#ff0000';
-    this.addSpan(
-      'status-span',
-      `Depth: ${state.depth}/${state.maxDepth}`,
-      depthColor
-    );
-    this.addSpan(
-      'status-span',
+    this.addDiv(`HP: ${state.hp}/${state.maxHp}`, hpColor);
+    const depthColor = state.depth <= state.maxDepth ? goodColor : badColor;
+    this.addDiv(`Depth: ${state.depth}/${state.maxDepth}`, depthColor);
+    this.addDiv(
       `Air: ${state.airPercentage}%`,
       colorFromFraction(state.airPercentage / 100)
     );
     if (state.dead) {
-      this.addSpan('status-span', 'Dead', '#ff0000');
+      this.addDiv('Dead', badColor);
     }
   }
 }
@@ -757,6 +758,9 @@ function removeAllChildren(element) {
 exports.makeElement = makeElement;
 exports.makeSpan = makeSpan;
 exports.removeAllChildren = removeAllChildren;
+exports.goodColor = '#00ff00';
+exports.badColor = '#ff0000';
+exports.neutralColor = 'white';
 
 },{}],9:[function(require,module,exports){
 'use strict';
@@ -896,6 +900,7 @@ const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
 const { toTitleCase } = require('./textutil.js');
+const { goodColor, badColor } = require('./htmlutil.js');
 const assert = require('./assert.js');
 
 const monsterTypes = {};
@@ -1077,9 +1082,9 @@ class Monster extends GameObject {
       this.dead = true;
       if (this.isPlayer()) {
         if (deadMessage) {
-          world.ui.message(deadMessage, '#ff0000');
+          world.ui.message(deadMessage, badColor);
         }
-        world.ui.message('You die.', '#ff0000');
+        world.ui.message('You die.', badColor);
         world.ui.updateStatusArea();
       } else {
         if (world.isVisible(this.x, this.y)) {
@@ -1109,7 +1114,7 @@ class Monster extends GameObject {
       const time = world.ui.now();
       world.ui.message(
         `${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
-        this.isPlayer() ? '#00ff00' : '#ff0000',
+        this.isPlayer() ? goodColor : badColor,
         hp
       );
       await world.ui.animate(
@@ -1176,7 +1181,7 @@ class Monster extends GameObject {
       const hp = randomRange(1, 3);
       world.ui.message(
         'The hull creaks ominously under the enormous pressure.',
-        '#ff0000',
+        badColor,
         hp
       );
       await this.doDamage(hp, 'A sudden rush of water enters the vessel.');
@@ -1210,7 +1215,7 @@ registerClass(Monster, 20);
 
 module.exports = Monster;
 
-},{"./animation.js":1,"./assert.js":2,"./game-object.js":6,"./imgutil.js":9,"./monstertype.js":13,"./path-finder.js":15,"./pickle.js":17,"./randutil.js":19,"./terrain.js":21,"./textutil.js":23,"./world.js":24}],13:[function(require,module,exports){
+},{"./animation.js":1,"./assert.js":2,"./game-object.js":6,"./htmlutil.js":8,"./imgutil.js":9,"./monstertype.js":13,"./path-finder.js":15,"./pickle.js":17,"./randutil.js":19,"./terrain.js":21,"./textutil.js":23,"./world.js":24}],13:[function(require,module,exports){
 'use strict';
 
 module.exports = [
@@ -1850,6 +1855,7 @@ const pqueue = require('./pqueue.js');
 const database = require('./database.js');
 const { getIdFromXY, getXFromId, getYFromId } = require('./indexutil.js');
 const { pickle, unpickle } = require('./pickle.js');
+const { badColor } = require('./htmlutil.js');
 const assert = require('./assert.js');
 
 const { terrainTypes } = require('./terrain.js');
@@ -2055,7 +2061,7 @@ class World {
         [10, 'PANIC: almost out of air.']
       ]) {
         if (oldAirPercentage > limit && airPercentage <= limit) {
-          this.ui.message(message, '#ff0000');
+          this.ui.message(message, badColor);
           break;
         }
       }
@@ -2228,4 +2234,4 @@ class World {
 
 module.exports = new World();
 
-},{"./assert.js":2,"./database.js":4,"./indexutil.js":11,"./permissive-fov.js":16,"./pickle.js":17,"./pqueue.js":18,"./terrain-grid.js":20,"./terrain.js":21}]},{},[10]);
+},{"./assert.js":2,"./database.js":4,"./htmlutil.js":8,"./indexutil.js":11,"./permissive-fov.js":16,"./pickle.js":17,"./pqueue.js":18,"./terrain-grid.js":20,"./terrain.js":21}]},{},[10]);

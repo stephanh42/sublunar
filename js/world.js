@@ -6,6 +6,7 @@ const pqueue = require('./pqueue.js');
 const database = require('./database.js');
 const { getIdFromXY, getXFromId, getYFromId } = require('./indexutil.js');
 const { pickle, unpickle } = require('./pickle.js');
+const { badColor } = require('./htmlutil.js');
 const assert = require('./assert.js');
 
 const { terrainTypes } = require('./terrain.js');
@@ -211,7 +212,7 @@ class World {
         [10, 'PANIC: almost out of air.']
       ]) {
         if (oldAirPercentage > limit && airPercentage <= limit) {
-          this.ui.message(message, '#ff0000');
+          this.ui.message(message, badColor);
           break;
         }
       }

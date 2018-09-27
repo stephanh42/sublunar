@@ -7,7 +7,13 @@ const Monster = require('./monster.js');
 const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
-const { makeElement, makeSpan, removeAllChildren } = require('./htmlutil.js');
+const {
+  makeElement,
+  makeSpan,
+  removeAllChildren,
+  goodColor,
+  badColor
+} = require('./htmlutil.js');
 const {
   ActiveEventHandler,
   blockedEventHandler
@@ -90,8 +96,8 @@ class StatusArea {
     return true;
   }
 
-  addSpan(...args) {
-    this.statusArea.appendChild(makeSpan(...args));
+  addDiv(...args) {
+    this.statusArea.appendChild(makeElement('div', 'status-span', ...args));
   }
 
   update() {
@@ -106,20 +112,15 @@ class StatusArea {
       return;
     }
     const hpColor = colorFromFraction(state.hp / state.maxHp);
-    this.addSpan('status-span', `HP: ${state.hp}/${state.maxHp}`, hpColor);
-    const depthColor = state.depth <= state.maxDepth ? '#00ff00' : '#ff0000';
-    this.addSpan(
-      'status-span',
-      `Depth: ${state.depth}/${state.maxDepth}`,
-      depthColor
-    );
-    this.addSpan(
-      'status-span',
+    this.addDiv(`HP: ${state.hp}/${state.maxHp}`, hpColor);
+    const depthColor = state.depth <= state.maxDepth ? goodColor : badColor;
+    this.addDiv(`Depth: ${state.depth}/${state.maxDepth}`, depthColor);
+    this.addDiv(
       `Air: ${state.airPercentage}%`,
       colorFromFraction(state.airPercentage / 100)
     );
     if (state.dead) {
-      this.addSpan('status-span', 'Dead', '#ff0000');
+      this.addDiv('Dead', badColor);
     }
   }
 }

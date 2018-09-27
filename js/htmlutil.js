@@ -24,3 +24,6 @@ function removeAllChildren(element) {
 exports.makeElement = makeElement;
 exports.makeSpan = makeSpan;
 exports.removeAllChildren = removeAllChildren;
+exports.goodColor = '#00ff00';
+exports.badColor = '#ff0000';
+exports.neutralColor = 'white';

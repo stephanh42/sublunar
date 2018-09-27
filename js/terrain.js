@@ -1,6 +1,6 @@
 'use strict';
 
-const {loadImageSizes} = require('./imgutil.js');
+const { loadImageSizes } = require('./imgutil.js');
 
 async function awaitPromises(promises) {
   for (const promise of promises) {
@@ -32,7 +32,11 @@ function loadImages() {
   const promises = [];
   for (const terrain of terrainList) {
     if (terrain.imageName) {
-      promises.push(loadImageSizes('img/' + terrain.imageName).then(imgs => { terrain.images = imgs; }));
+      promises.push(
+        loadImageSizes('img/' + terrain.imageName).then(imgs => {
+          terrain.images = imgs;
+        })
+      );
     }
   }
   return awaitPromises(promises);

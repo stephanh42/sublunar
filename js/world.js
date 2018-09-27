@@ -1,14 +1,14 @@
 'use strict';
 
-const permissiveFov = require("./permissive-fov.js");
+const permissiveFov = require('./permissive-fov.js');
 const fovTree = permissiveFov.fovTree.children();
 const pqueue = require('./pqueue.js');
 const database = require('./database.js');
-const {getIdFromXY, getXFromId, getYFromId} = require('./indexutil.js');
-const {pickle, unpickle} = require('./pickle.js');
+const { getIdFromXY, getXFromId, getYFromId } = require('./indexutil.js');
+const { pickle, unpickle } = require('./pickle.js');
 const assert = require('./assert.js');
 
-const {terrainTypes} = require('./terrain.js');
+const { terrainTypes } = require('./terrain.js');
 const TerrainGrid = require('./terrain-grid.js');
 
 const emptyArray = [];
@@ -102,14 +102,21 @@ class World {
         if (tree.distance > distance) {
           continue;
         }
-        let x = tree.x; let y = tree.y;
-        if (t & 1) { x = -x; }
-        if (t & 2) { y = -y; }
+        let x = tree.x;
+        let y = tree.y;
+        if (t & 1) {
+          x = -x;
+        }
+        if (t & 2) {
+          y = -y;
+        }
         if (t & 4) {
           const tmp = x;
-          x = y; y = tmp;
+          x = y;
+          y = tmp;
         }
-        x += px; y += py;
+        x += px;
+        y += py;
         visible.add(getIdFromXY(x, y));
         world.updateSeen(x, y);
         if (world.getTerrain(x, y).transparent) {
@@ -181,7 +188,9 @@ class World {
 
   airPercentage() {
     const dt = this.time - this.lastAirTime;
-    return Math.ceil(100*Math.max(0, this.airDuration - dt)/this.airDuration);
+    return Math.ceil(
+      (100 * Math.max(0, this.airDuration - dt)) / this.airDuration
+    );
   }
 
   async checkAir(oldAirPercentage) {
@@ -196,8 +205,12 @@ class World {
     if (airPercentage === 0) {
       return player.doDamage(Infinity, 'You suffocate as you run out of air.');
     } else {
-      for (const [limit, message] of [[50, 'Air getting low.'], [25, 'WARNING: low on air.'], [10, 'PANIC: almost out of air.']]) {
-        if ((oldAirPercentage > limit) && (airPercentage <= limit)) {
+      for (const [limit, message] of [
+        [50, 'Air getting low.'],
+        [25, 'WARNING: low on air.'],
+        [10, 'PANIC: almost out of air.']
+      ]) {
+        if (oldAirPercentage > limit && airPercentage <= limit) {
           this.ui.message(message, '#ff0000');
           break;
         }
@@ -276,18 +289,26 @@ class World {
     this.airDuration = json.airDuration;
   }
 
-  saveGame({clearAll=false}={}) {
+  saveGame({ clearAll = false } = {}) {
     return new Promise((resolve, reject) => {
       const dead = this.player && this.player.dead;
-      const transaction = this.database.transaction(database.objectStores, 'readwrite');
+      const transaction = this.database.transaction(
+        database.objectStores,
+        'readwrite'
+      );
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(new Error('Transaction aborted'));
-      transaction.oncomplete = () => { this.markNonDirty(); resolve(); };
+      transaction.oncomplete = () => {
+        this.markNonDirty();
+        resolve();
+      };
       if (clearAll || dead) {
         for (const objectStore of database.objectStores) {
-        transaction.objectStore(objectStore).clear();
+          transaction.objectStore(objectStore).clear();
         }
-        if (dead) { return; }
+        if (dead) {
+          return;
+        }
       }
       transaction.objectStore('game').put(this.getGlobalData(), 1);
       const gameObjectsStore = transaction.objectStore('game-objects');
@@ -300,14 +321,19 @@ class World {
         }
       }
       this.terrainGrid.saveDirty(transaction.objectStore('terrain'));
-      this.rememberedTerrainGrid.saveDirty(transaction.objectStore('remembered-terrain'));
+      this.rememberedTerrainGrid.saveDirty(
+        transaction.objectStore('remembered-terrain')
+      );
     });
   }
 
   tryLoadGame() {
     return new Promise((resolve, reject) => {
       this.reset();
-      const transaction = this.database.transaction(database.objectStores, 'readonly');
+      const transaction = this.database.transaction(
+        database.objectStores,
+        'readonly'
+      );
       transaction.onerror = () => {
         if (transaction.error) {
           reject(transaction.error);
@@ -319,9 +345,13 @@ class World {
       transaction.oncomplete = () => resolve(true);
 
       this.terrainGrid.load(transaction.objectStore('terrain'));
-      this.rememberedTerrainGrid.load(transaction.objectStore('remembered-terrain'));
+      this.rememberedTerrainGrid.load(
+        transaction.objectStore('remembered-terrain')
+      );
 
-      transaction.objectStore('game-objects').openCursor().onsuccess = event => {
+      transaction
+        .objectStore('game-objects')
+        .openCursor().onsuccess = event => {
         const cursor = event.target.result;
         if (cursor) {
           const xy = cursor.key;
@@ -334,7 +364,7 @@ class World {
           // go on with reading the rest
           transaction.objectStore('game').get(1).onsuccess = event => {
             const result = event.target.result;
-            if (result && (result.version === gameVersion)) {
+            if (result && result.version === gameVersion) {
               this.setGlobalData(result);
             } else {
               transaction.abort();
@@ -342,7 +372,7 @@ class World {
           };
         }
       };
-   });
+    });
   }
 
   markNonDirty() {

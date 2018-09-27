@@ -2,14 +2,14 @@
 'use strict';
 
 function lerp(s, x0, x1) {
-  return (1-s)*x0 + s*x1;
+  return (1 - s) * x0 + s * x1;
 }
 
 const identity = x => x;
-const bump = x => 4*x*(1-x);
+const bump = x => 4 * x * (1 - x);
 
 class State {
-  constructor(time, x, y, opacity=1) {
+  constructor(time, x, y, opacity = 1) {
     this.time = time;
     this.x = x;
     this.y = y;
@@ -17,17 +17,24 @@ class State {
   }
 
   interpolate(otherState, time, sfunc) {
-    let s = (time - this.time)/(otherState.time - this.time);
+    let s = (time - this.time) / (otherState.time - this.time);
     s = sfunc(Math.max(0, Math.min(1, s)));
-    return new State(time,
-        lerp(s, this.x, otherState.x),
-        lerp(s, this.y, otherState.y),
-        lerp(s, this.opacity, otherState.opacity));
+    return new State(
+      time,
+      lerp(s, this.x, otherState.x),
+      lerp(s, this.y, otherState.y),
+      lerp(s, this.opacity, otherState.opacity)
+    );
   }
 }
 
 class ObjectAnimation {
-  constructor(gameObject, beginState, endState, {sfunc=identity, animatePlayer=true}={}) {
+  constructor(
+    gameObject,
+    beginState,
+    endState,
+    { sfunc = identity, animatePlayer = true } = {}
+  ) {
     this.gameObject = gameObject;
     this.beginState = beginState;
     this.endState = endState;
@@ -52,10 +59,9 @@ exports.ObjectAnimation = ObjectAnimation;
 },{}],2:[function(require,module,exports){
 'use strict';
 
-class AssertionError extends Error {
-}
+class AssertionError extends Error {}
 
-function assert(check, message='Invalid assertion') {
+function assert(check, message = 'Invalid assertion') {
   if (!check) {
     throw new AssertionError(message);
   }
@@ -75,14 +81,14 @@ class CanvasViewer {
     this.dpi = 1;
   }
 
-  async load() {
-  }
+  async load() {}
 
   redraw() {
     if (this.drawPromise === null) {
-      this.drawPromise = this.loadPromise.then(() =>
+      this.drawPromise = this.loadPromise.then(
+        () =>
           new Promise((resolve, reject) =>
-            window.requestAnimationFrame((time) => {
+            window.requestAnimationFrame(time => {
               this.drawPromise = null;
               try {
                 this.basicDraw(time);
@@ -90,7 +96,9 @@ class CanvasViewer {
               } catch (exc) {
                 reject(exc);
               }
-              })));
+            })
+          )
+      );
     }
     return this.drawPromise;
   }
@@ -111,9 +119,9 @@ class CanvasViewer {
   basicDraw(time) {
     performance.mark('draw-start');
     const canvas = this.canvas;
-    const width = (canvas.clientWidth * this.dpi)|0;
-    const height = (canvas.clientHeight * this.dpi)|0;
-    if ((width !== canvas.width) || (height !== canvas.height)) {
+    const width = (canvas.clientWidth * this.dpi) | 0;
+    const height = (canvas.clientHeight * this.dpi) | 0;
+    if (width !== canvas.width || height !== canvas.height) {
       canvas.width = width;
       canvas.height = height;
     }
@@ -128,8 +136,8 @@ class CanvasViewer {
     const canvas = this.canvas;
     const rect = canvas.getBoundingClientRect();
     return [
-      (evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
-      (evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+      ((evt.clientX - rect.left) / (rect.right - rect.left)) * canvas.width,
+      ((evt.clientY - rect.top) / (rect.bottom - rect.top)) * canvas.height
     ];
   }
 }
@@ -143,16 +151,16 @@ const objectStores = ['game', 'game-objects', 'terrain', 'remembered-terrain'];
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
-      const request = window.indexedDB.open('SublunarGameDB', 1);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = event => resolve(event.target.result);
-      request.onupgradeneeded = event => {
-        const db = event.target.result;
-        for (const objectStore of objectStores) {
-          db.createObjectStore(objectStore);
-        }
-      };
-   });
+    const request = window.indexedDB.open('SublunarGameDB', 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = event => resolve(event.target.result);
+    request.onupgradeneeded = event => {
+      const db = event.target.result;
+      for (const objectStore of objectStores) {
+        db.createObjectStore(objectStore);
+      }
+    };
+  });
 }
 
 exports.objectStores = objectStores;
@@ -162,37 +170,38 @@ exports.openDatabase = openDatabase;
 'use strict';
 
 const keyToDirection = {
-  "h": [-1, 0],
-  "j": [0, 1],
-  "k": [0, -1],
-  "l": [1, 0],
-  "ArrowLeft": [-1, 0],
-  "ArrowRight": [1, 0],
-  "ArrowUp": [0, -1],
-  "ArrowDown": [0, 1],
+  h: [-1, 0],
+  j: [0, 1],
+  k: [0, -1],
+  l: [1, 0],
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
   // non-standard Edge names
-  "Left": [-1, 0],
-  "Right": [1, 0],
-  "Up": [0, -1],
-  "Down": [0, 1],
-  "b": [-1, 1],
-  "n": [1, 1],
-  "y": [-1, -1],
-  "u": [1, -1],
+  Left: [-1, 0],
+  Right: [1, 0],
+  Up: [0, -1],
+  Down: [0, 1],
+  b: [-1, 1],
+  n: [1, 1],
+  y: [-1, -1],
+  u: [1, -1],
 
-  "1": [-1, -1],
-  "2": [0, -1],
-  "3": [1, -1],
-  "4": [-1, 0],
-  "6": [1, 0],
-  "7": [-1, 1],
-  "8": [0, 1],
-  "9": [1, 1]
+  '1': [-1, -1],
+  '2': [0, -1],
+  '3': [1, -1],
+  '4': [-1, 0],
+  '6': [1, 0],
+  '7': [-1, 1],
+  '8': [0, 1],
+  '9': [1, 1]
 };
 
-
 class BlockedEventHandler {
-  isActive() { return false; }
+  isActive() {
+    return false;
+  }
 
   onkeydown() {}
   onclick() {}
@@ -203,7 +212,9 @@ class ActiveEventHandler {
     this.canvasViewer = canvasViewer;
   }
 
-  isActive() { return true; }
+  isActive() {
+    return true;
+  }
 
   onkeydown(evt) {
     const direction = keyToDirection[evt.key];
@@ -232,9 +243,13 @@ class ActiveEventHandler {
     const cx = (canvas.width - fullTileSize) >> 1;
     const cy = (canvas.height - fullTileSize) >> 1;
 
-    const tileX = Math.floor((x - cx)/fullTileSize);
-    const tileY = Math.floor((y - cy)/fullTileSize);
-    if ((Math.abs(tileX) <= 1) && (Math.abs(tileY) <= 1) && ((tileX !== 0) || (tileY !== 0))) {
+    const tileX = Math.floor((x - cx) / fullTileSize);
+    const tileY = Math.floor((y - cy) / fullTileSize);
+    if (
+      Math.abs(tileX) <= 1 &&
+      Math.abs(tileY) <= 1 &&
+      (tileX !== 0 || tileY !== 0)
+    ) {
       canvasViewer.playerMove(tileX, tileY);
     }
   }
@@ -248,8 +263,8 @@ exports.ActiveEventHandler = ActiveEventHandler;
 
 const world = require('./world.js');
 const pqueue = require('./pqueue.js');
-const {getIdFromXY} = require('./indexutil.js');
-const {registerClass} = require('./pickle.js');
+const { getIdFromXY } = require('./indexutil.js');
+const { registerClass } = require('./pickle.js');
 const assert = require('./assert.js');
 
 class GameObject {
@@ -260,17 +275,21 @@ class GameObject {
   }
 
   getFlag(bit) {
-    const mask = 1<<bit;
+    const mask = 1 << bit;
     return (this.flags & mask) === mask;
   }
 
   setFlag(bit, flag) {
-    const mask = 1<<bit;
-    this.flags = flag ? (this.flags | mask) : (this.flags & ~mask);
+    const mask = 1 << bit;
+    this.flags = flag ? this.flags | mask : this.flags & ~mask;
   }
 
-  get isPlaced() { return this.getFlag(0); }
-  set isPlaced(flag) { this.setFlag(0, flag); }
+  get isPlaced() {
+    return this.getFlag(0);
+  }
+  set isPlaced(flag) {
+    this.setFlag(0, flag);
+  }
 
   pickleData() {
     const json = {};
@@ -367,9 +386,12 @@ const Monster = require('./monster.js');
 const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
-const {makeElement, makeSpan, removeAllChildren} = require('./htmlutil.js');
-const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
-const {colorFromFraction} = require('./imgutil.js');
+const { makeElement, makeSpan, removeAllChildren } = require('./htmlutil.js');
+const {
+  ActiveEventHandler,
+  blockedEventHandler
+} = require('./event-handler.js');
+const { colorFromFraction } = require('./imgutil.js');
 const assert = require('./assert.js');
 
 class Message {
@@ -397,8 +419,10 @@ class Message {
     if (!otherMessage) {
       return false;
     }
-    if ((this.message === otherMessage.message) &&
-      (this.color === otherMessage.color)) {
+    if (
+      this.message === otherMessage.message &&
+      this.color === otherMessage.color
+    ) {
       this.repeat += otherMessage.repeat;
       this.hp += otherMessage.hp;
       return true;
@@ -434,7 +458,7 @@ class StatusArea {
     if (state1 === state2) {
       return true;
     }
-    if ((state1 === null) || (state2 === null)) {
+    if (state1 === null || state2 === null) {
       return false;
     }
     for (const [k, v] of Object.entries(state2)) {
@@ -460,11 +484,19 @@ class StatusArea {
     if (state === null) {
       return;
     }
-    const hpColor = colorFromFraction(state.hp/state.maxHp);
+    const hpColor = colorFromFraction(state.hp / state.maxHp);
     this.addSpan('status-span', `HP: ${state.hp}/${state.maxHp}`, hpColor);
-    const depthColor = (state.depth <= state.maxDepth) ? '#00ff00' : '#ff0000';
-    this.addSpan('status-span', `Depth: ${state.depth}/${state.maxDepth}`, depthColor);
-    this.addSpan('status-span', `Air: ${state.airPercentage}%`, colorFromFraction(state.airPercentage/100));
+    const depthColor = state.depth <= state.maxDepth ? '#00ff00' : '#ff0000';
+    this.addSpan(
+      'status-span',
+      `Depth: ${state.depth}/${state.maxDepth}`,
+      depthColor
+    );
+    this.addSpan(
+      'status-span',
+      `Air: ${state.airPercentage}%`,
+      colorFromFraction(state.airPercentage / 100)
+    );
     if (state.dead) {
       this.addSpan('status-span', 'Dead', '#ff0000');
     }
@@ -477,7 +509,7 @@ class UserInterface {
     this.messageArea = messageArea;
     this.statusArea = new StatusArea(statusArea);
     this.lastMessage = null;
-    messageArea.addEventListener('click', ()=>this.clearMessageArea());
+    messageArea.addEventListener('click', () => this.clearMessageArea());
   }
 
   redraw() {
@@ -496,7 +528,7 @@ class UserInterface {
     return performance.now();
   }
 
-  message(message, color='white', hp=0) {
+  message(message, color = 'white', hp = 0) {
     const msg = new Message(message, color, hp);
     if (msg.tryCombine(this.lastMessage)) {
       this.messageArea.removeChild(this.messageArea.lastChild);
@@ -522,16 +554,28 @@ class GameViewer extends CanvasViewer {
     this.animation = null;
     const dpi = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     this.dpi = dpi;
-    this.tileSize = 8*Math.round(dpi*5);
+    this.tileSize = 8 * Math.round(dpi * 5);
     this.ui = world.ui = new UserInterface(this, messageArea, statusArea);
-    document.addEventListener('keydown', (evt) => this.eventHandler().onkeydown(evt), false);
-    canvas.addEventListener('click', (evt) => this.eventHandler().onclick(evt), false);
+    document.addEventListener(
+      'keydown',
+      evt => this.eventHandler().onkeydown(evt),
+      false
+    );
+    canvas.addEventListener(
+      'click',
+      evt => this.eventHandler().onclick(evt),
+      false
+    );
   }
 
-  eventHandler() { return this.eventHandlers[this.eventHandlers.length-1]; }
+  eventHandler() {
+    return this.eventHandlers[this.eventHandlers.length - 1];
+  }
 
   isBlocked() {
-    return !this.eventHandler().isActive() || !world.player || world.player.dead;
+    return (
+      !this.eventHandler().isActive() || !world.player || world.player.dead
+    );
   }
 
   async handlePromise(promise) {
@@ -569,9 +613,10 @@ class GameViewer extends CanvasViewer {
     } else {
       msg = 'Starting a new game.';
       newgame();
-      await world.saveGame({clearAll: true});
+      await world.saveGame({ clearAll: true });
     }
-    await p1; await p2;
+    await p1;
+    await p2;
     this.ui.updateStatusArea();
     this.ui.clearMessageArea();
     this.ui.message(msg, 'yellow');
@@ -603,7 +648,7 @@ class GameViewer extends CanvasViewer {
     let cy = (height - fullTileSize) >> 1;
     const animationObject = animation && animation.gameObject;
 
-    if ((animationObject === player) && animation.animatePlayer) {
+    if (animationObject === player && animation.animatePlayer) {
       const state = animation.getState(time);
       cx -= Math.round((state.x - px) * fullTileSize);
       cy -= Math.round((state.y - py) * fullTileSize);
@@ -613,8 +658,16 @@ class GameViewer extends CanvasViewer {
     ctx.translate(cx, cy);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
 
-    for (let iy = Math.floor(-cy/fullTileSize); iy < Math.ceil((height-cy)/fullTileSize); iy++) {
-      for (let ix = Math.floor(-cx/fullTileSize); ix < Math.ceil((width-cx)/fullTileSize); ix++) {
+    for (
+      let iy = Math.floor(-cy / fullTileSize);
+      iy < Math.ceil((height - cy) / fullTileSize);
+      iy++
+    ) {
+      for (
+        let ix = Math.floor(-cx / fullTileSize);
+        ix < Math.ceil((width - cx) / fullTileSize);
+        ix++
+      ) {
         const wx = ix + px;
         const wy = iy + py;
         const isVisible = world.isVisible(wx, wy);
@@ -622,18 +675,32 @@ class GameViewer extends CanvasViewer {
         const terrain = world.getRememberedTerrain(wx, wy);
         const imgs = terrain.images;
         if (imgs) {
-          ctx.drawImage(imgs.get(tileSize), ix*fullTileSize, iy*fullTileSize);
+          ctx.drawImage(
+            imgs.get(tileSize),
+            ix * fullTileSize,
+            iy * fullTileSize
+          );
           anythingShown = true;
         }
         if (isVisible) {
-          for (const gameObject  of world.getGameObjects(wx, wy)) {
+          for (const gameObject of world.getGameObjects(wx, wy)) {
             if (gameObject !== animationObject) {
-              gameObject.draw(ctx, ix*fullTileSize, iy*fullTileSize, tileSize);
+              gameObject.draw(
+                ctx,
+                ix * fullTileSize,
+                iy * fullTileSize,
+                tileSize
+              );
             }
           }
         }
         if (!isVisible && anythingShown) {
-          ctx.fillRect(ix*fullTileSize, iy*fullTileSize, tileSize, tileSize);
+          ctx.fillRect(
+            ix * fullTileSize,
+            iy * fullTileSize,
+            tileSize,
+            tileSize
+          );
         }
       }
     }
@@ -654,7 +721,7 @@ class GameViewer extends CanvasViewer {
       ctx.strokeStyle = '#FFFFFF';
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.rect(-0.5, -0.5, tileSize+1, tileSize+1);
+      ctx.rect(-0.5, -0.5, tileSize + 1, tileSize + 1);
       ctx.stroke();
     }
     ctx.restore();
@@ -717,7 +784,7 @@ function resizeImage(img, origSize, newSize) {
 
   const canvas = createCanvas(newSize, newSize);
   const ctx = canvas.getContext('2d');
-  const factor = newSize/origSize;
+  const factor = newSize / origSize;
   ctx.scale(factor, factor);
   ctx.drawImage(img, 0, 0);
   return canvas;
@@ -756,9 +823,9 @@ async function loadImageSizes(url) {
 
 function colorFromFraction(fraction) {
   if (fraction < 0.5) {
-    return `rgb(255, ${Math.round(255*2*fraction)}, 0)`;
+    return `rgb(255, ${Math.round(255 * 2 * fraction)}, 0)`;
   } else {
-    return `rgb(${Math.round(255*2*(1-fraction))}, 255, 0)`;
+    return `rgb(${Math.round(255 * 2 * (1 - fraction))}, 255, 0)`;
   }
 }
 
@@ -771,7 +838,7 @@ class HealthBarDrawer {
 
   get(width, height, healthFraction) {
     const barWidth = Math.round(healthFraction * (width - 2));
-    if ((this.width !== width) || (this.height !== height)) {
+    if (this.width !== width || this.height !== height) {
       this.width = width;
       this.height = height;
       this.cachedImages.clear();
@@ -782,8 +849,8 @@ class HealthBarDrawer {
       const ctx = img.getContext('2d');
       ctx.fillStyle = '#303030';
       ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = colorFromFraction(barWidth / (width-2));
-      ctx.fillRect(1, 1, barWidth, height-2);
+      ctx.fillStyle = colorFromFraction(barWidth / (width - 2));
+      ctx.fillRect(1, 1, barWidth, height - 2);
 
       this.cachedImages.set(barWidth, img);
     }
@@ -811,24 +878,24 @@ gameViewer.redraw().then(console.log, console.error);
 },{"./gameviewer.js":7}],11:[function(require,module,exports){
 'use strict';
 
-const xyMask = (1<<16)-1;
+const xyMask = (1 << 16) - 1;
 
 exports.getIdFromXY = (x, y) => (x << 16) | (y & xyMask);
-exports.getXFromId = xy => (xy >> 16);
-exports.getYFromId = xy => ((xy << 16) >> 16);
+exports.getXFromId = xy => xy >> 16;
+exports.getYFromId = xy => (xy << 16) >> 16;
 
 },{}],12:[function(require,module,exports){
 'use strict';
 
-const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
-const {awaitPromises} = require('./terrain.js');
-const {registerClass} = require('./pickle.js');
-const {randomInt, randomRange} = require('./randutil.js');
+const { loadImageSizes, healthBarDrawer } = require('./imgutil.js');
+const { awaitPromises } = require('./terrain.js');
+const { registerClass } = require('./pickle.js');
+const { randomInt, randomRange } = require('./randutil.js');
 const GameObject = require('./game-object.js');
 const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
-const {toTitleCase} = require('./textutil.js');
+const { toTitleCase } = require('./textutil.js');
 const assert = require('./assert.js');
 
 const monsterTypes = {};
@@ -836,12 +903,12 @@ const monsterList = [];
 
 function makeMonsterType(id, json) {
   const result = {
-   id: id,
-   baseDelay: 6,
-   intelligence: 10,
-   hpRecovery: 1/24,
-   maxDepth: Infinity,
-   images: null
+    id: id,
+    baseDelay: 6,
+    intelligence: 10,
+    hpRecovery: 1 / 24,
+    maxDepth: Infinity,
+    images: null
   };
   Object.assign(result, json);
   result.imageName = result.imageName || result.name;
@@ -883,17 +950,29 @@ class Monster extends GameObject {
     this.monsterType = monsterType;
     this.baseHp = monsterType ? monsterType.maxHp : 0;
     this.baseHpTime = 0;
-    this.direction = (randomInt(2) === 0);
+    this.direction = randomInt(2) === 0;
   }
 
-  get waiting() { return this.getFlag(1); }
-  set waiting(flag) { this.setFlag(1, flag); }
+  get waiting() {
+    return this.getFlag(1);
+  }
+  set waiting(flag) {
+    this.setFlag(1, flag);
+  }
 
-  get direction() { return this.getFlag(2); }
-  set direction(flag) { this.setFlag(2, flag); }
+  get direction() {
+    return this.getFlag(2);
+  }
+  set direction(flag) {
+    this.setFlag(2, flag);
+  }
 
-  get dead() { return this.getFlag(3); }
-  set dead(flag) { this.setFlag(3, flag); }
+  get dead() {
+    return this.getFlag(3);
+  }
+  set dead(flag) {
+    this.setFlag(3, flag);
+  }
 
   pickleData() {
     const json = super.pickleData();
@@ -915,7 +994,7 @@ class Monster extends GameObject {
       return 0;
     }
     const dt = world.time - this.baseHpTime;
-    const hp = (this.baseHp + dt * this.monsterType.hpRecovery)|0;
+    const hp = (this.baseHp + dt * this.monsterType.hpRecovery) | 0;
     return Math.max(0, Math.min(this.monsterType.maxHp, hp));
   }
 
@@ -931,18 +1010,26 @@ class Monster extends GameObject {
   draw(ctx, x, y, tileSize) {
     const img = this.monsterType.images.get(tileSize);
     drawImageDirection(ctx, img, x, y, this.direction);
-    const hpFraction = this.getHp()/this.monsterType.maxHp;
+    const hpFraction = this.getHp() / this.monsterType.maxHp;
     if (hpFraction < 1) {
-      const healthBarWidth = tileSize>>1;
-      const healthBarHeight = tileSize>>3;
-      const healthBar = healthBarDrawer.get(healthBarWidth, healthBarHeight, hpFraction);
-      ctx.drawImage(healthBar, x + tileSize - healthBarWidth - 1, y + tileSize - healthBarHeight - 1);
+      const healthBarWidth = tileSize >> 1;
+      const healthBarHeight = tileSize >> 3;
+      const healthBar = healthBarDrawer.get(
+        healthBarWidth,
+        healthBarHeight,
+        hpFraction
+      );
+      ctx.drawImage(
+        healthBar,
+        x + tileSize - healthBarWidth - 1,
+        y + tileSize - healthBarHeight - 1
+      );
     }
   }
 
   sleep(deltaTime) {
     this.waiting = true;
-    this.schedule(deltaTime, "wakeUp");
+    this.schedule(deltaTime, 'wakeUp');
   }
 
   updateSeen() {
@@ -953,7 +1040,7 @@ class Monster extends GameObject {
 
   setDirection(dx) {
     if (dx !== 0) {
-      this.direction = (dx > 0);
+      this.direction = dx > 0;
       this.markDirty();
     }
   }
@@ -972,10 +1059,12 @@ class Monster extends GameObject {
     if (oldVisible || newVisible) {
       const time = world.ui.now();
       return world.ui.animate(
-          new animation.ObjectAnimation(
-            this,
-            new animation.State(time, xold, yold, oldVisible|0),
-            new animation.State(time+100, xnew, ynew, newVisible|0)));
+        new animation.ObjectAnimation(
+          this,
+          new animation.State(time, xold, yold, oldVisible | 0),
+          new animation.State(time + 100, xnew, ynew, newVisible | 0)
+        )
+      );
     }
   }
 
@@ -996,10 +1085,12 @@ class Monster extends GameObject {
         if (world.isVisible(this.x, this.y)) {
           const time = world.ui.now();
           await world.ui.animate(
-              new animation.ObjectAnimation(
-                this,
-                new animation.State(time, this.x, this.y, 1),
-                new animation.State(time+100, this.x, this.y, 0)));
+            new animation.ObjectAnimation(
+              this,
+              new animation.State(time, this.x, this.y, 1),
+              new animation.State(time + 100, this.x, this.y, 0)
+            )
+          );
           world.ui.message(`${toTitleCase(this.theName())} dies.`);
         }
         this.basicUnplace();
@@ -1016,14 +1107,19 @@ class Monster extends GameObject {
     this.sleep(this.monsterType.baseDelay);
     if (oldVisible || newVisible) {
       const time = world.ui.now();
-      world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
-          this.isPlayer() ? '#00ff00' : '#ff0000', hp);
+      world.ui.message(
+        `${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
+        this.isPlayer() ? '#00ff00' : '#ff0000',
+        hp
+      );
       await world.ui.animate(
-          new animation.ObjectAnimation(
-            this,
-            new animation.State(time, this.x, this.y, oldVisible|0),
-            new animation.State(time+100, victim.x, victim.y, newVisible|0),
-            {sfunc: animation.bump, animatePlayer: false}));
+        new animation.ObjectAnimation(
+          this,
+          new animation.State(time, this.x, this.y, oldVisible | 0),
+          new animation.State(time + 100, victim.x, victim.y, newVisible | 0),
+          { sfunc: animation.bump, animatePlayer: false }
+        )
+      );
     }
     return victim.doDamage(hp);
   }
@@ -1050,7 +1146,13 @@ class Monster extends GameObject {
     if (!this.isPlayer()) {
       const target = this.target();
       if (target) {
-        const pf = new MonsterPathFinder(this.x, this.y, target.x, target.y, this);
+        const pf = new MonsterPathFinder(
+          this.x,
+          this.y,
+          target.x,
+          target.y,
+          this
+        );
         pf.runN(this.monsterType.intelligence);
         const path = pf.getPath();
         if (path.length >= 2) {
@@ -1069,10 +1171,14 @@ class Monster extends GameObject {
     assert(this.isPlayer(), 'Non-player checks depth');
     const maxDepth = this.monsterType.maxDepth;
     const depth = this.y;
-    const badLuck = Math.min(1, Math.max(0, depth- maxDepth)/maxDepth);
+    const badLuck = Math.min(1, Math.max(0, depth - maxDepth) / maxDepth);
     if (Math.random() < badLuck) {
       const hp = randomRange(1, 3);
-      world.ui.message('The hull creaks ominously under the enormous pressure.', '#ff0000', hp);
+      world.ui.message(
+        'The hull creaks ominously under the enormous pressure.',
+        '#ff0000',
+        hp
+      );
       await this.doDamage(hp, 'A sudden rush of water enters the vessel.');
     }
     this.schedule(randomRange(5, 10), 'checkDepth');
@@ -1082,7 +1188,11 @@ class Monster extends GameObject {
     const promises = [];
     for (const monster of monsterList) {
       if (monster.imageName) {
-        promises.push(loadImageSizes('img/' + monster.imageName).then(imgs => { monster.images = imgs; }));
+        promises.push(
+          loadImageSizes('img/' + monster.imageName).then(imgs => {
+            monster.images = imgs;
+          })
+        );
       }
     }
     return awaitPromises(promises);
@@ -1104,26 +1214,26 @@ module.exports = Monster;
 'use strict';
 
 module.exports = [
-{
-  name: 'submarine',
-  maxHp: 20,
-  maxDepth: 10,
-  hpRecovery: 1/12,
-},
-{
-  name: 'squid',
-  baseDelay: 12,
-  maxHp: 12
-}
+  {
+    name: 'submarine',
+    maxHp: 20,
+    maxDepth: 10,
+    hpRecovery: 1 / 12
+  },
+  {
+    name: 'squid',
+    baseDelay: 12,
+    maxHp: 12
+  }
 ];
 
 },{}],14:[function(require,module,exports){
 'use strict';
 
-const {terrainTypes} = require('./terrain.js');
+const { terrainTypes } = require('./terrain.js');
 const Monster = require('./monster.js');
 const world = require('./world.js');
-const {randomStep} = require('./randutil.js');
+const { randomStep } = require('./randutil.js');
 
 function randomWalk(n) {
   let x = 0;
@@ -1134,14 +1244,16 @@ function randomWalk(n) {
       world.setTerrain(x, -1, terrainTypes.air);
     } else {
       world.setTerrain(x, y, terrainTypes.water);
-      if (world.isPassable(x, y) && (Math.random() < 0.01)) {
-        (new Monster(Monster.monsterTypes.squid)).basicMove(x, y);
+      if (world.isPassable(x, y) && Math.random() < 0.01) {
+        new Monster(Monster.monsterTypes.squid).basicMove(x, y);
       }
     }
     for (;;) {
       const [xn, yn] = randomStep(x, y);
-      if ((yn >= 0) && (yn < 20)) {
-        x = xn; y = yn; break;
+      if (yn >= 0 && yn < 20) {
+        x = xn;
+        y = yn;
+        break;
       }
     }
   }
@@ -1163,7 +1275,7 @@ module.exports = newGame;
 'use strict';
 
 const pqueue = require('./pqueue.js');
-const {getIdFromXY} = require('./indexutil.js');
+const { getIdFromXY } = require('./indexutil.js');
 
 class PathNode {
   constructor(heuristic, cost, order, x, y, previous) {
@@ -1199,15 +1311,18 @@ class PathFinder {
   }
 
   isPassableOrDestination(x, y) {
-    return ((x === this.x1) && (y === this.y1)) || this.isPassable(x, y);
+    return (x === this.x1 && y === this.y1) || this.isPassable(x, y);
   }
 
-  addOpenSet(cost, x, y, previous=null) {
+  addOpenSet(cost, x, y, previous = null) {
     const dx = x - this.x1;
     const dy = y - this.y1;
     const heuristic = Math.max(Math.abs(dx), Math.abs(dy));
-    const order = dx*dx + dy*dy; // use Euclidian norm to break ties
-    pqueue.insert(this.openSet, new PathNode(heuristic, cost, order, x, y, previous));
+    const order = dx * dx + dy * dy; // use Euclidian norm to break ties
+    pqueue.insert(
+      this.openSet,
+      new PathNode(heuristic, cost, order, x, y, previous)
+    );
   }
 
   runStep() {
@@ -1226,7 +1341,7 @@ class PathFinder {
       return;
     }
     this.currentNode = currentNode;
-    if ((x === this.x1) && (y === this.y1)) {
+    if (x === this.x1 && y === this.y1) {
       this.openSet = [];
       this.incomplete = false;
       this.found = true;
@@ -1235,7 +1350,7 @@ class PathFinder {
     this.closedSet.add(xy);
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
-        if ((dx === 0) && (dy === 0)) {
+        if (dx === 0 && dy === 0) {
           continue;
         }
         const x2 = x + dx;
@@ -1257,7 +1372,7 @@ class PathFinder {
   }
 
   runN(n) {
-    while (this.incomplete && (n > 0)) {
+    while (this.incomplete && n > 0) {
       this.runStep();
       n--;
     }
@@ -1292,13 +1407,14 @@ class Ray {
   }
 
   atPoint(x, y) {
-    return this.a*x + this.b - y;
+    return this.a * x + this.b - y;
   }
 
   zeroCrossing(s1, otherRay, s2) {
     return new Ray(
       zeroCrossing(this.a, s1, otherRay.a, s2),
-      zeroCrossing(this.b, s1, otherRay.b, s2));
+      zeroCrossing(this.b, s1, otherRay.b, s2)
+    );
   }
 }
 
@@ -1326,8 +1442,10 @@ class Beam {
     }
     for (const ray of this.rays) {
       const s = ray.atPoint(x, y);
-      if (previousRay &&
-          (((previousS < 0) && (s > 0)) || ((previousS > 0) && (s < 0)))) {
+      if (
+        previousRay &&
+        ((previousS < 0 && s > 0) || (previousS > 0 && s < 0))
+      ) {
         const splitRay = previousRay.zeroCrossing(previousS, ray, s);
         negativeRays.push(splitRay);
         zeroRays.push(splitRay);
@@ -1347,19 +1465,18 @@ class Beam {
       previousRay = ray;
       previousS = s;
     }
-    return {negative: new Beam(hasNegative ? negativeRays: []),
-            zero: new Beam(zeroRays),
-            positive: new Beam(hasPositive ? positiveRays : [])
+    return {
+      negative: new Beam(hasNegative ? negativeRays : []),
+      zero: new Beam(zeroRays),
+      positive: new Beam(hasPositive ? positiveRays : [])
     };
   }
 }
 
-const initialBeam = new Beam([
-  new Ray(0, 0.5),
-  new Ray(0, -0.5),
-  new Ray(1, -1),
-  new Ray(1, 1)
-], true);
+const initialBeam = new Beam(
+  [new Ray(0, 0.5), new Ray(0, -0.5), new Ray(1, -1), new Ray(1, 1)],
+  true
+);
 
 class FovTree {
   constructor(x, y, beam) {
@@ -1381,12 +1498,18 @@ class FovTree {
       this._children = [];
       const x = this.x;
       const y = this.y;
-      const splitBeams = this._beam.splitPoint(x+0.5, y+0.5);
-      this._addChild(0, 1,
-          splitBeams.positive.splitPoint(x-0.5, y+0.5).negative);
+      const splitBeams = this._beam.splitPoint(x + 0.5, y + 0.5);
+      this._addChild(
+        0,
+        1,
+        splitBeams.positive.splitPoint(x - 0.5, y + 0.5).negative
+      );
       this._addChild(1, 1, splitBeams.zero);
-      this._addChild(1, 0,
-          splitBeams.negative.splitPoint(x+0.5, y-0.5).positive);
+      this._addChild(
+        1,
+        0,
+        splitBeams.negative.splitPoint(x + 0.5, y - 0.5).positive
+      );
     }
     return this._children;
   }
@@ -1405,7 +1528,10 @@ const classIdSymbol = Symbol();
 const classIdToConstructor = new Map();
 
 function registerClass(constructor, classId) {
-  assert(classIdToConstructor.get(classId) === undefined, 'Class ID already in use');
+  assert(
+    classIdToConstructor.get(classId) === undefined,
+    'Class ID already in use'
+  );
   const prototype = constructor.prototype;
   assert(prototype.pickleData, 'Class misses pickleData method');
   assert(prototype.unpickleData, 'Class misses unpickleData method');
@@ -1442,7 +1568,7 @@ function swap(pq, i, j) {
 function lessThan(obj1, obj2) {
   const time1 = obj1.time;
   const time2 = obj2.time;
-  return (time1 < time2) || ((time1 === time2) && (obj1.order < obj2.order));
+  return time1 < time2 || (time1 === time2 && obj1.order < obj2.order);
 }
 
 function insert(pq, obj) {
@@ -1472,8 +1598,8 @@ function remove(pq) {
   let pos = 0;
   const obj = pq[pos];
   for (;;) {
-    const child1 = 2*pos+1;
-    const child2 = 2*pos+2;
+    const child1 = 2 * pos + 1;
+    const child2 = 2 * pos + 2;
     if (child1 >= pq.length) {
       break;
     } else if (child2 >= pq.length) {
@@ -1498,11 +1624,11 @@ function remove(pq) {
   return result;
 }
 
-function test(N=10) {
+function test(N = 10) {
   const input = [];
   const pq = [];
   for (let i = 0; i < N; i++) {
-    const obj = {time: Math.random(), order: i};
+    const obj = { time: Math.random(), order: i };
     insert(pq, obj);
     input.push(obj);
   }
@@ -1521,23 +1647,31 @@ exports.test = test;
 'use strict';
 
 function randomInt(n) {
-  return (Math.random() * n)|0;
+  return (Math.random() * n) | 0;
 }
 
-function randomStep(x=0, y=0) {
+function randomStep(x = 0, y = 0) {
   switch (randomInt(4)) {
-    case 0: x++; break;
-    case 1: y++; break;
-    case 2: x--; break;
-    case 3: y--; break;
+    case 0:
+      x++;
+      break;
+    case 1:
+      y++;
+      break;
+    case 2:
+      x--;
+      break;
+    case 3:
+      y--;
+      break;
   }
   return [x, y];
 }
 
 function randomRange(lo, hi) {
   const n = hi - lo;
-  const nhalf = n>>1;
-  return lo + randomInt(nhalf+1) + randomInt(n-nhalf+1);
+  const nhalf = n >> 1;
+  return lo + randomInt(nhalf + 1) + randomInt(n - nhalf + 1);
 }
 
 exports.randomInt = randomInt;
@@ -1547,8 +1681,8 @@ exports.randomRange = randomRange;
 },{}],20:[function(require,module,exports){
 'use strict';
 
-const {getIdFromXY} = require('./indexutil.js');
-const {terrainList} = require('./terrain.js');
+const { getIdFromXY } = require('./indexutil.js');
+const { terrainList } = require('./terrain.js');
 
 function getTerrainIdFromXY(x, y) {
   return getIdFromXY(x >> 4, y >> 4);
@@ -1613,7 +1747,7 @@ module.exports = TerrainGrid;
 },{"./indexutil.js":11,"./terrain.js":21}],21:[function(require,module,exports){
 'use strict';
 
-const {loadImageSizes} = require('./imgutil.js');
+const { loadImageSizes } = require('./imgutil.js');
 
 async function awaitPromises(promises) {
   for (const promise of promises) {
@@ -1645,7 +1779,11 @@ function loadImages() {
   const promises = [];
   for (const terrain of terrainList) {
     if (terrain.imageName) {
-      promises.push(loadImageSizes('img/' + terrain.imageName).then(imgs => { terrain.images = imgs; }));
+      promises.push(
+        loadImageSizes('img/' + terrain.imageName).then(imgs => {
+          terrain.images = imgs;
+        })
+      );
     }
   }
   return awaitPromises(promises);
@@ -1660,34 +1798,34 @@ exports.awaitPromises = awaitPromises;
 'use strict';
 
 module.exports = [
-{
-  name: 'unseen',
-  passable: false,
-  transparent: false
-},
-{
-  name: 'wall',
-  image: 'wall',
-  passable: false,
-  transparent: false
-},
-{
-  name: 'water',
-  image: 'water',
-  passable: true,
-  transparent: true
-},
-{
-  name: 'wave',
-  image: 'wave',
-  passable: true,
-  transparent: true
-},
-{
-  name: 'air',
-  passable: false,
-  transparent: true
-}
+  {
+    name: 'unseen',
+    passable: false,
+    transparent: false
+  },
+  {
+    name: 'wall',
+    image: 'wall',
+    passable: false,
+    transparent: false
+  },
+  {
+    name: 'water',
+    image: 'water',
+    passable: true,
+    transparent: true
+  },
+  {
+    name: 'wave',
+    image: 'wave',
+    passable: true,
+    transparent: true
+  },
+  {
+    name: 'air',
+    passable: false,
+    transparent: true
+  }
 ];
 
 },{}],23:[function(require,module,exports){
@@ -1706,15 +1844,15 @@ exports.toTitleCase = toTitleCase;
 },{}],24:[function(require,module,exports){
 'use strict';
 
-const permissiveFov = require("./permissive-fov.js");
+const permissiveFov = require('./permissive-fov.js');
 const fovTree = permissiveFov.fovTree.children();
 const pqueue = require('./pqueue.js');
 const database = require('./database.js');
-const {getIdFromXY, getXFromId, getYFromId} = require('./indexutil.js');
-const {pickle, unpickle} = require('./pickle.js');
+const { getIdFromXY, getXFromId, getYFromId } = require('./indexutil.js');
+const { pickle, unpickle } = require('./pickle.js');
 const assert = require('./assert.js');
 
-const {terrainTypes} = require('./terrain.js');
+const { terrainTypes } = require('./terrain.js');
 const TerrainGrid = require('./terrain-grid.js');
 
 const emptyArray = [];
@@ -1808,14 +1946,21 @@ class World {
         if (tree.distance > distance) {
           continue;
         }
-        let x = tree.x; let y = tree.y;
-        if (t & 1) { x = -x; }
-        if (t & 2) { y = -y; }
+        let x = tree.x;
+        let y = tree.y;
+        if (t & 1) {
+          x = -x;
+        }
+        if (t & 2) {
+          y = -y;
+        }
         if (t & 4) {
           const tmp = x;
-          x = y; y = tmp;
+          x = y;
+          y = tmp;
         }
-        x += px; y += py;
+        x += px;
+        y += py;
         visible.add(getIdFromXY(x, y));
         world.updateSeen(x, y);
         if (world.getTerrain(x, y).transparent) {
@@ -1887,7 +2032,9 @@ class World {
 
   airPercentage() {
     const dt = this.time - this.lastAirTime;
-    return Math.ceil(100*Math.max(0, this.airDuration - dt)/this.airDuration);
+    return Math.ceil(
+      (100 * Math.max(0, this.airDuration - dt)) / this.airDuration
+    );
   }
 
   async checkAir(oldAirPercentage) {
@@ -1902,8 +2049,12 @@ class World {
     if (airPercentage === 0) {
       return player.doDamage(Infinity, 'You suffocate as you run out of air.');
     } else {
-      for (const [limit, message] of [[50, 'Air getting low.'], [25, 'WARNING: low on air.'], [10, 'PANIC: almost out of air.']]) {
-        if ((oldAirPercentage > limit) && (airPercentage <= limit)) {
+      for (const [limit, message] of [
+        [50, 'Air getting low.'],
+        [25, 'WARNING: low on air.'],
+        [10, 'PANIC: almost out of air.']
+      ]) {
+        if (oldAirPercentage > limit && airPercentage <= limit) {
           this.ui.message(message, '#ff0000');
           break;
         }
@@ -1982,18 +2133,26 @@ class World {
     this.airDuration = json.airDuration;
   }
 
-  saveGame({clearAll=false}={}) {
+  saveGame({ clearAll = false } = {}) {
     return new Promise((resolve, reject) => {
       const dead = this.player && this.player.dead;
-      const transaction = this.database.transaction(database.objectStores, 'readwrite');
+      const transaction = this.database.transaction(
+        database.objectStores,
+        'readwrite'
+      );
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(new Error('Transaction aborted'));
-      transaction.oncomplete = () => { this.markNonDirty(); resolve(); };
+      transaction.oncomplete = () => {
+        this.markNonDirty();
+        resolve();
+      };
       if (clearAll || dead) {
         for (const objectStore of database.objectStores) {
-        transaction.objectStore(objectStore).clear();
+          transaction.objectStore(objectStore).clear();
         }
-        if (dead) { return; }
+        if (dead) {
+          return;
+        }
       }
       transaction.objectStore('game').put(this.getGlobalData(), 1);
       const gameObjectsStore = transaction.objectStore('game-objects');
@@ -2006,14 +2165,19 @@ class World {
         }
       }
       this.terrainGrid.saveDirty(transaction.objectStore('terrain'));
-      this.rememberedTerrainGrid.saveDirty(transaction.objectStore('remembered-terrain'));
+      this.rememberedTerrainGrid.saveDirty(
+        transaction.objectStore('remembered-terrain')
+      );
     });
   }
 
   tryLoadGame() {
     return new Promise((resolve, reject) => {
       this.reset();
-      const transaction = this.database.transaction(database.objectStores, 'readonly');
+      const transaction = this.database.transaction(
+        database.objectStores,
+        'readonly'
+      );
       transaction.onerror = () => {
         if (transaction.error) {
           reject(transaction.error);
@@ -2025,9 +2189,13 @@ class World {
       transaction.oncomplete = () => resolve(true);
 
       this.terrainGrid.load(transaction.objectStore('terrain'));
-      this.rememberedTerrainGrid.load(transaction.objectStore('remembered-terrain'));
+      this.rememberedTerrainGrid.load(
+        transaction.objectStore('remembered-terrain')
+      );
 
-      transaction.objectStore('game-objects').openCursor().onsuccess = event => {
+      transaction
+        .objectStore('game-objects')
+        .openCursor().onsuccess = event => {
         const cursor = event.target.result;
         if (cursor) {
           const xy = cursor.key;
@@ -2040,7 +2208,7 @@ class World {
           // go on with reading the rest
           transaction.objectStore('game').get(1).onsuccess = event => {
             const result = event.target.result;
-            if (result && (result.version === gameVersion)) {
+            if (result && result.version === gameVersion) {
               this.setGlobalData(result);
             } else {
               transaction.abort();
@@ -2048,7 +2216,7 @@ class World {
           };
         }
       };
-   });
+    });
   }
 
   markNonDirty() {

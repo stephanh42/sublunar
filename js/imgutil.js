@@ -23,7 +23,7 @@ function resizeImage(img, origSize, newSize) {
 
   const canvas = createCanvas(newSize, newSize);
   const ctx = canvas.getContext('2d');
-  const factor = newSize/origSize;
+  const factor = newSize / origSize;
   ctx.scale(factor, factor);
   ctx.drawImage(img, 0, 0);
   return canvas;
@@ -62,9 +62,9 @@ async function loadImageSizes(url) {
 
 function colorFromFraction(fraction) {
   if (fraction < 0.5) {
-    return `rgb(255, ${Math.round(255*2*fraction)}, 0)`;
+    return `rgb(255, ${Math.round(255 * 2 * fraction)}, 0)`;
   } else {
-    return `rgb(${Math.round(255*2*(1-fraction))}, 255, 0)`;
+    return `rgb(${Math.round(255 * 2 * (1 - fraction))}, 255, 0)`;
   }
 }
 
@@ -77,7 +77,7 @@ class HealthBarDrawer {
 
   get(width, height, healthFraction) {
     const barWidth = Math.round(healthFraction * (width - 2));
-    if ((this.width !== width) || (this.height !== height)) {
+    if (this.width !== width || this.height !== height) {
       this.width = width;
       this.height = height;
       this.cachedImages.clear();
@@ -88,8 +88,8 @@ class HealthBarDrawer {
       const ctx = img.getContext('2d');
       ctx.fillStyle = '#303030';
       ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = colorFromFraction(barWidth / (width-2));
-      ctx.fillRect(1, 1, barWidth, height-2);
+      ctx.fillStyle = colorFromFraction(barWidth / (width - 2));
+      ctx.fillRect(1, 1, barWidth, height - 2);
 
       this.cachedImages.set(barWidth, img);
     }

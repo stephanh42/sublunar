@@ -1,9 +1,9 @@
 'use strict';
 
-const {terrainTypes} = require('./terrain.js');
+const { terrainTypes } = require('./terrain.js');
 const Monster = require('./monster.js');
 const world = require('./world.js');
-const {randomStep} = require('./randutil.js');
+const { randomStep } = require('./randutil.js');
 
 function randomWalk(n) {
   let x = 0;
@@ -14,14 +14,16 @@ function randomWalk(n) {
       world.setTerrain(x, -1, terrainTypes.air);
     } else {
       world.setTerrain(x, y, terrainTypes.water);
-      if (world.isPassable(x, y) && (Math.random() < 0.01)) {
-        (new Monster(Monster.monsterTypes.squid)).basicMove(x, y);
+      if (world.isPassable(x, y) && Math.random() < 0.01) {
+        new Monster(Monster.monsterTypes.squid).basicMove(x, y);
       }
     }
     for (;;) {
       const [xn, yn] = randomStep(x, y);
-      if ((yn >= 0) && (yn < 20)) {
-        x = xn; y = yn; break;
+      if (yn >= 0 && yn < 20) {
+        x = xn;
+        y = yn;
+        break;
       }
     }
   }

@@ -12,13 +12,14 @@ class Ray {
   }
 
   atPoint(x, y) {
-    return this.a*x + this.b - y;
+    return this.a * x + this.b - y;
   }
 
   zeroCrossing(s1, otherRay, s2) {
     return new Ray(
       zeroCrossing(this.a, s1, otherRay.a, s2),
-      zeroCrossing(this.b, s1, otherRay.b, s2));
+      zeroCrossing(this.b, s1, otherRay.b, s2)
+    );
   }
 }
 
@@ -46,8 +47,10 @@ class Beam {
     }
     for (const ray of this.rays) {
       const s = ray.atPoint(x, y);
-      if (previousRay &&
-          (((previousS < 0) && (s > 0)) || ((previousS > 0) && (s < 0)))) {
+      if (
+        previousRay &&
+        ((previousS < 0 && s > 0) || (previousS > 0 && s < 0))
+      ) {
         const splitRay = previousRay.zeroCrossing(previousS, ray, s);
         negativeRays.push(splitRay);
         zeroRays.push(splitRay);
@@ -67,19 +70,18 @@ class Beam {
       previousRay = ray;
       previousS = s;
     }
-    return {negative: new Beam(hasNegative ? negativeRays: []),
-            zero: new Beam(zeroRays),
-            positive: new Beam(hasPositive ? positiveRays : [])
+    return {
+      negative: new Beam(hasNegative ? negativeRays : []),
+      zero: new Beam(zeroRays),
+      positive: new Beam(hasPositive ? positiveRays : [])
     };
   }
 }
 
-const initialBeam = new Beam([
-  new Ray(0, 0.5),
-  new Ray(0, -0.5),
-  new Ray(1, -1),
-  new Ray(1, 1)
-], true);
+const initialBeam = new Beam(
+  [new Ray(0, 0.5), new Ray(0, -0.5), new Ray(1, -1), new Ray(1, 1)],
+  true
+);
 
 class FovTree {
   constructor(x, y, beam) {
@@ -101,12 +103,18 @@ class FovTree {
       this._children = [];
       const x = this.x;
       const y = this.y;
-      const splitBeams = this._beam.splitPoint(x+0.5, y+0.5);
-      this._addChild(0, 1,
-          splitBeams.positive.splitPoint(x-0.5, y+0.5).negative);
+      const splitBeams = this._beam.splitPoint(x + 0.5, y + 0.5);
+      this._addChild(
+        0,
+        1,
+        splitBeams.positive.splitPoint(x - 0.5, y + 0.5).negative
+      );
       this._addChild(1, 1, splitBeams.zero);
-      this._addChild(1, 0,
-          splitBeams.negative.splitPoint(x+0.5, y-0.5).positive);
+      this._addChild(
+        1,
+        0,
+        splitBeams.negative.splitPoint(x + 0.5, y - 0.5).positive
+      );
     }
     return this._children;
   }

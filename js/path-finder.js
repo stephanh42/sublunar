@@ -1,7 +1,7 @@
 'use strict';
 
 const pqueue = require('./pqueue.js');
-const {getIdFromXY} = require('./indexutil.js');
+const { getIdFromXY } = require('./indexutil.js');
 
 class PathNode {
   constructor(heuristic, cost, order, x, y, previous) {
@@ -37,15 +37,18 @@ class PathFinder {
   }
 
   isPassableOrDestination(x, y) {
-    return ((x === this.x1) && (y === this.y1)) || this.isPassable(x, y);
+    return (x === this.x1 && y === this.y1) || this.isPassable(x, y);
   }
 
-  addOpenSet(cost, x, y, previous=null) {
+  addOpenSet(cost, x, y, previous = null) {
     const dx = x - this.x1;
     const dy = y - this.y1;
     const heuristic = Math.max(Math.abs(dx), Math.abs(dy));
-    const order = dx*dx + dy*dy; // use Euclidian norm to break ties
-    pqueue.insert(this.openSet, new PathNode(heuristic, cost, order, x, y, previous));
+    const order = dx * dx + dy * dy; // use Euclidian norm to break ties
+    pqueue.insert(
+      this.openSet,
+      new PathNode(heuristic, cost, order, x, y, previous)
+    );
   }
 
   runStep() {
@@ -64,7 +67,7 @@ class PathFinder {
       return;
     }
     this.currentNode = currentNode;
-    if ((x === this.x1) && (y === this.y1)) {
+    if (x === this.x1 && y === this.y1) {
       this.openSet = [];
       this.incomplete = false;
       this.found = true;
@@ -73,7 +76,7 @@ class PathFinder {
     this.closedSet.add(xy);
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
-        if ((dx === 0) && (dy === 0)) {
+        if (dx === 0 && dy === 0) {
           continue;
         }
         const x2 = x + dx;
@@ -95,7 +98,7 @@ class PathFinder {
   }
 
   runN(n) {
-    while (this.incomplete && (n > 0)) {
+    while (this.incomplete && n > 0) {
       this.runStep();
       n--;
     }

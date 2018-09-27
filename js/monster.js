@@ -1,14 +1,14 @@
 'use strict';
 
-const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
-const {awaitPromises} = require('./terrain.js');
-const {registerClass} = require('./pickle.js');
-const {randomInt, randomRange} = require('./randutil.js');
+const { loadImageSizes, healthBarDrawer } = require('./imgutil.js');
+const { awaitPromises } = require('./terrain.js');
+const { registerClass } = require('./pickle.js');
+const { randomInt, randomRange } = require('./randutil.js');
 const GameObject = require('./game-object.js');
 const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
-const {toTitleCase} = require('./textutil.js');
+const { toTitleCase } = require('./textutil.js');
 const assert = require('./assert.js');
 
 const monsterTypes = {};
@@ -16,12 +16,12 @@ const monsterList = [];
 
 function makeMonsterType(id, json) {
   const result = {
-   id: id,
-   baseDelay: 6,
-   intelligence: 10,
-   hpRecovery: 1/24,
-   maxDepth: Infinity,
-   images: null
+    id: id,
+    baseDelay: 6,
+    intelligence: 10,
+    hpRecovery: 1 / 24,
+    maxDepth: Infinity,
+    images: null
   };
   Object.assign(result, json);
   result.imageName = result.imageName || result.name;
@@ -63,17 +63,29 @@ class Monster extends GameObject {
     this.monsterType = monsterType;
     this.baseHp = monsterType ? monsterType.maxHp : 0;
     this.baseHpTime = 0;
-    this.direction = (randomInt(2) === 0);
+    this.direction = randomInt(2) === 0;
   }
 
-  get waiting() { return this.getFlag(1); }
-  set waiting(flag) { this.setFlag(1, flag); }
+  get waiting() {
+    return this.getFlag(1);
+  }
+  set waiting(flag) {
+    this.setFlag(1, flag);
+  }
 
-  get direction() { return this.getFlag(2); }
-  set direction(flag) { this.setFlag(2, flag); }
+  get direction() {
+    return this.getFlag(2);
+  }
+  set direction(flag) {
+    this.setFlag(2, flag);
+  }
 
-  get dead() { return this.getFlag(3); }
-  set dead(flag) { this.setFlag(3, flag); }
+  get dead() {
+    return this.getFlag(3);
+  }
+  set dead(flag) {
+    this.setFlag(3, flag);
+  }
 
   pickleData() {
     const json = super.pickleData();
@@ -95,7 +107,7 @@ class Monster extends GameObject {
       return 0;
     }
     const dt = world.time - this.baseHpTime;
-    const hp = (this.baseHp + dt * this.monsterType.hpRecovery)|0;
+    const hp = (this.baseHp + dt * this.monsterType.hpRecovery) | 0;
     return Math.max(0, Math.min(this.monsterType.maxHp, hp));
   }
 
@@ -111,18 +123,26 @@ class Monster extends GameObject {
   draw(ctx, x, y, tileSize) {
     const img = this.monsterType.images.get(tileSize);
     drawImageDirection(ctx, img, x, y, this.direction);
-    const hpFraction = this.getHp()/this.monsterType.maxHp;
+    const hpFraction = this.getHp() / this.monsterType.maxHp;
     if (hpFraction < 1) {
-      const healthBarWidth = tileSize>>1;
-      const healthBarHeight = tileSize>>3;
-      const healthBar = healthBarDrawer.get(healthBarWidth, healthBarHeight, hpFraction);
-      ctx.drawImage(healthBar, x + tileSize - healthBarWidth - 1, y + tileSize - healthBarHeight - 1);
+      const healthBarWidth = tileSize >> 1;
+      const healthBarHeight = tileSize >> 3;
+      const healthBar = healthBarDrawer.get(
+        healthBarWidth,
+        healthBarHeight,
+        hpFraction
+      );
+      ctx.drawImage(
+        healthBar,
+        x + tileSize - healthBarWidth - 1,
+        y + tileSize - healthBarHeight - 1
+      );
     }
   }
 
   sleep(deltaTime) {
     this.waiting = true;
-    this.schedule(deltaTime, "wakeUp");
+    this.schedule(deltaTime, 'wakeUp');
   }
 
   updateSeen() {
@@ -133,7 +153,7 @@ class Monster extends GameObject {
 
   setDirection(dx) {
     if (dx !== 0) {
-      this.direction = (dx > 0);
+      this.direction = dx > 0;
       this.markDirty();
     }
   }
@@ -152,10 +172,12 @@ class Monster extends GameObject {
     if (oldVisible || newVisible) {
       const time = world.ui.now();
       return world.ui.animate(
-          new animation.ObjectAnimation(
-            this,
-            new animation.State(time, xold, yold, oldVisible|0),
-            new animation.State(time+100, xnew, ynew, newVisible|0)));
+        new animation.ObjectAnimation(
+          this,
+          new animation.State(time, xold, yold, oldVisible | 0),
+          new animation.State(time + 100, xnew, ynew, newVisible | 0)
+        )
+      );
     }
   }
 
@@ -176,10 +198,12 @@ class Monster extends GameObject {
         if (world.isVisible(this.x, this.y)) {
           const time = world.ui.now();
           await world.ui.animate(
-              new animation.ObjectAnimation(
-                this,
-                new animation.State(time, this.x, this.y, 1),
-                new animation.State(time+100, this.x, this.y, 0)));
+            new animation.ObjectAnimation(
+              this,
+              new animation.State(time, this.x, this.y, 1),
+              new animation.State(time + 100, this.x, this.y, 0)
+            )
+          );
           world.ui.message(`${toTitleCase(this.theName())} dies.`);
         }
         this.basicUnplace();
@@ -196,14 +220,19 @@ class Monster extends GameObject {
     this.sleep(this.monsterType.baseDelay);
     if (oldVisible || newVisible) {
       const time = world.ui.now();
-      world.ui.message(`${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
-          this.isPlayer() ? '#00ff00' : '#ff0000', hp);
+      world.ui.message(
+        `${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
+        this.isPlayer() ? '#00ff00' : '#ff0000',
+        hp
+      );
       await world.ui.animate(
-          new animation.ObjectAnimation(
-            this,
-            new animation.State(time, this.x, this.y, oldVisible|0),
-            new animation.State(time+100, victim.x, victim.y, newVisible|0),
-            {sfunc: animation.bump, animatePlayer: false}));
+        new animation.ObjectAnimation(
+          this,
+          new animation.State(time, this.x, this.y, oldVisible | 0),
+          new animation.State(time + 100, victim.x, victim.y, newVisible | 0),
+          { sfunc: animation.bump, animatePlayer: false }
+        )
+      );
     }
     return victim.doDamage(hp);
   }
@@ -230,7 +259,13 @@ class Monster extends GameObject {
     if (!this.isPlayer()) {
       const target = this.target();
       if (target) {
-        const pf = new MonsterPathFinder(this.x, this.y, target.x, target.y, this);
+        const pf = new MonsterPathFinder(
+          this.x,
+          this.y,
+          target.x,
+          target.y,
+          this
+        );
         pf.runN(this.monsterType.intelligence);
         const path = pf.getPath();
         if (path.length >= 2) {
@@ -249,10 +284,14 @@ class Monster extends GameObject {
     assert(this.isPlayer(), 'Non-player checks depth');
     const maxDepth = this.monsterType.maxDepth;
     const depth = this.y;
-    const badLuck = Math.min(1, Math.max(0, depth- maxDepth)/maxDepth);
+    const badLuck = Math.min(1, Math.max(0, depth - maxDepth) / maxDepth);
     if (Math.random() < badLuck) {
       const hp = randomRange(1, 3);
-      world.ui.message('The hull creaks ominously under the enormous pressure.', '#ff0000', hp);
+      world.ui.message(
+        'The hull creaks ominously under the enormous pressure.',
+        '#ff0000',
+        hp
+      );
       await this.doDamage(hp, 'A sudden rush of water enters the vessel.');
     }
     this.schedule(randomRange(5, 10), 'checkDepth');
@@ -262,7 +301,11 @@ class Monster extends GameObject {
     const promises = [];
     for (const monster of monsterList) {
       if (monster.imageName) {
-        promises.push(loadImageSizes('img/' + monster.imageName).then(imgs => { monster.images = imgs; }));
+        promises.push(
+          loadImageSizes('img/' + monster.imageName).then(imgs => {
+            monster.images = imgs;
+          })
+        );
       }
     }
     return awaitPromises(promises);

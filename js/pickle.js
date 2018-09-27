@@ -6,7 +6,10 @@ const classIdSymbol = Symbol();
 const classIdToConstructor = new Map();
 
 function registerClass(constructor, classId) {
-  assert(classIdToConstructor.get(classId) === undefined, 'Class ID already in use');
+  assert(
+    classIdToConstructor.get(classId) === undefined,
+    'Class ID already in use'
+  );
   const prototype = constructor.prototype;
   assert(prototype.pickleData, 'Class misses pickleData method');
   assert(prototype.unpickleData, 'Class misses unpickleData method');

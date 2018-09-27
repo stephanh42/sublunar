@@ -1,37 +1,38 @@
 'use strict';
 
 const keyToDirection = {
-  "h": [-1, 0],
-  "j": [0, 1],
-  "k": [0, -1],
-  "l": [1, 0],
-  "ArrowLeft": [-1, 0],
-  "ArrowRight": [1, 0],
-  "ArrowUp": [0, -1],
-  "ArrowDown": [0, 1],
+  h: [-1, 0],
+  j: [0, 1],
+  k: [0, -1],
+  l: [1, 0],
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
   // non-standard Edge names
-  "Left": [-1, 0],
-  "Right": [1, 0],
-  "Up": [0, -1],
-  "Down": [0, 1],
-  "b": [-1, 1],
-  "n": [1, 1],
-  "y": [-1, -1],
-  "u": [1, -1],
+  Left: [-1, 0],
+  Right: [1, 0],
+  Up: [0, -1],
+  Down: [0, 1],
+  b: [-1, 1],
+  n: [1, 1],
+  y: [-1, -1],
+  u: [1, -1],
 
-  "1": [-1, -1],
-  "2": [0, -1],
-  "3": [1, -1],
-  "4": [-1, 0],
-  "6": [1, 0],
-  "7": [-1, 1],
-  "8": [0, 1],
-  "9": [1, 1]
+  '1': [-1, -1],
+  '2': [0, -1],
+  '3': [1, -1],
+  '4': [-1, 0],
+  '6': [1, 0],
+  '7': [-1, 1],
+  '8': [0, 1],
+  '9': [1, 1]
 };
 
-
 class BlockedEventHandler {
-  isActive() { return false; }
+  isActive() {
+    return false;
+  }
 
   onkeydown() {}
   onclick() {}
@@ -42,7 +43,9 @@ class ActiveEventHandler {
     this.canvasViewer = canvasViewer;
   }
 
-  isActive() { return true; }
+  isActive() {
+    return true;
+  }
 
   onkeydown(evt) {
     const direction = keyToDirection[evt.key];
@@ -71,9 +74,13 @@ class ActiveEventHandler {
     const cx = (canvas.width - fullTileSize) >> 1;
     const cy = (canvas.height - fullTileSize) >> 1;
 
-    const tileX = Math.floor((x - cx)/fullTileSize);
-    const tileY = Math.floor((y - cy)/fullTileSize);
-    if ((Math.abs(tileX) <= 1) && (Math.abs(tileY) <= 1) && ((tileX !== 0) || (tileY !== 0))) {
+    const tileX = Math.floor((x - cx) / fullTileSize);
+    const tileY = Math.floor((y - cy) / fullTileSize);
+    if (
+      Math.abs(tileX) <= 1 &&
+      Math.abs(tileY) <= 1 &&
+      (tileX !== 0 || tileY !== 0)
+    ) {
       canvasViewer.playerMove(tileX, tileY);
     }
   }

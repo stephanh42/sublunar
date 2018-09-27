@@ -9,7 +9,7 @@ function swap(pq, i, j) {
 function lessThan(obj1, obj2) {
   const time1 = obj1.time;
   const time2 = obj2.time;
-  return (time1 < time2) || ((time1 === time2) && (obj1.order < obj2.order));
+  return time1 < time2 || (time1 === time2 && obj1.order < obj2.order);
 }
 
 function insert(pq, obj) {
@@ -39,8 +39,8 @@ function remove(pq) {
   let pos = 0;
   const obj = pq[pos];
   for (;;) {
-    const child1 = 2*pos+1;
-    const child2 = 2*pos+2;
+    const child1 = 2 * pos + 1;
+    const child2 = 2 * pos + 2;
     if (child1 >= pq.length) {
       break;
     } else if (child2 >= pq.length) {
@@ -65,11 +65,11 @@ function remove(pq) {
   return result;
 }
 
-function test(N=10) {
+function test(N = 10) {
   const input = [];
   const pq = [];
   for (let i = 0; i < N; i++) {
-    const obj = {time: Math.random(), order: i};
+    const obj = { time: Math.random(), order: i };
     insert(pq, obj);
     input.push(obj);
   }

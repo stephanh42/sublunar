@@ -2,8 +2,8 @@
 
 const world = require('./world.js');
 const pqueue = require('./pqueue.js');
-const {getIdFromXY} = require('./indexutil.js');
-const {registerClass} = require('./pickle.js');
+const { getIdFromXY } = require('./indexutil.js');
+const { registerClass } = require('./pickle.js');
 const assert = require('./assert.js');
 
 class GameObject {
@@ -14,17 +14,21 @@ class GameObject {
   }
 
   getFlag(bit) {
-    const mask = 1<<bit;
+    const mask = 1 << bit;
     return (this.flags & mask) === mask;
   }
 
   setFlag(bit, flag) {
-    const mask = 1<<bit;
-    this.flags = flag ? (this.flags | mask) : (this.flags & ~mask);
+    const mask = 1 << bit;
+    this.flags = flag ? this.flags | mask : this.flags & ~mask;
   }
 
-  get isPlaced() { return this.getFlag(0); }
-  set isPlaced(flag) { this.setFlag(0, flag); }
+  get isPlaced() {
+    return this.getFlag(0);
+  }
+  set isPlaced(flag) {
+    this.setFlag(0, flag);
+  }
 
   pickleData() {
     const json = {};

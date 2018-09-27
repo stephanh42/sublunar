@@ -9,14 +9,14 @@ class CanvasViewer {
     this.dpi = 1;
   }
 
-  async load() {
-  }
+  async load() {}
 
   redraw() {
     if (this.drawPromise === null) {
-      this.drawPromise = this.loadPromise.then(() =>
+      this.drawPromise = this.loadPromise.then(
+        () =>
           new Promise((resolve, reject) =>
-            window.requestAnimationFrame((time) => {
+            window.requestAnimationFrame(time => {
               this.drawPromise = null;
               try {
                 this.basicDraw(time);
@@ -24,7 +24,9 @@ class CanvasViewer {
               } catch (exc) {
                 reject(exc);
               }
-              })));
+            })
+          )
+      );
     }
     return this.drawPromise;
   }
@@ -45,9 +47,9 @@ class CanvasViewer {
   basicDraw(time) {
     performance.mark('draw-start');
     const canvas = this.canvas;
-    const width = (canvas.clientWidth * this.dpi)|0;
-    const height = (canvas.clientHeight * this.dpi)|0;
-    if ((width !== canvas.width) || (height !== canvas.height)) {
+    const width = (canvas.clientWidth * this.dpi) | 0;
+    const height = (canvas.clientHeight * this.dpi) | 0;
+    if (width !== canvas.width || height !== canvas.height) {
       canvas.width = width;
       canvas.height = height;
     }
@@ -62,8 +64,8 @@ class CanvasViewer {
     const canvas = this.canvas;
     const rect = canvas.getBoundingClientRect();
     return [
-      (evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
-      (evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+      ((evt.clientX - rect.left) / (rect.right - rect.left)) * canvas.width,
+      ((evt.clientY - rect.top) / (rect.bottom - rect.top)) * canvas.height
     ];
   }
 }

@@ -1,6 +1,8 @@
 # sublunar
 Roguelike game about exploring the underground oceans on the Moon.
 
+![Screenshot](screenshot.png)
+
 The game is not yet winnable (or loose-able, for that matter;-)).
 It currently has "tech demo" status.
 

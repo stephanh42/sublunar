@@ -312,7 +312,9 @@ class GameObject {
   updateIfPlayer() {
     if (this === world.player) {
       world.updateVisible();
-      world.ui.updateStatusArea();
+      if (world.ui) {
+        world.ui.updateStatusArea();
+      }
     }
   }
 
@@ -911,6 +913,7 @@ function makeMonsterType(id, json) {
     hpRecovery: 1 / 24,
     maxDepth: Infinity,
     frequency: 0,
+    alive: false,
     imageName: null,
     images: null
   };
@@ -955,6 +958,23 @@ class Monster extends GameObject {
     this.baseHp = monsterType ? monsterType.maxHp : 0;
     this.baseHpTime = 0;
     this.direction = randomInt(2) === 0;
+  }
+
+  static chooseMonsterType(filter = () => true) {
+    const theMonsterList = monsterList.filter(filter);
+    const totalFrequency = theMonsterList.reduce(
+      (sum, mt) => sum + mt.frequency,
+      0
+    );
+    const triggerFrequency = Math.random() * totalFrequency;
+    let frequency = 0;
+    for (const mt of theMonsterList) {
+      frequency += mt.frequency;
+      if (triggerFrequency < frequency) {
+        return mt;
+      }
+    }
+    return null;
   }
 
   get waiting() {
@@ -1095,7 +1115,8 @@ class Monster extends GameObject {
               new animation.State(time + 100, this.x, this.y, 0)
             )
           );
-          world.ui.message(`${toTitleCase(this.theName())} dies.`);
+          const verb = this.monsterType.alive ? 'dies' : 'is destroyed';
+          world.ui.message(`${toTitleCase(this.theName())} ${verb}.`);
         }
         this.basicUnplace();
       }
@@ -1133,7 +1154,10 @@ class Monster extends GameObject {
   }
 
   isPassable(x, y) {
-    return world.isPassable(x, y);
+    return (
+      world.isPassable(x, y) &&
+      (this.isPlayer() || y <= this.monsterType.maxDepth)
+    );
   }
 
   target() {
@@ -1236,7 +1260,8 @@ module.exports = [
     name: 'squid',
     baseDelay: 12,
     maxHp: 12,
-    frequency: 10
+    frequency: 10,
+    alive: true
   }
 ];
 
@@ -1258,7 +1283,10 @@ function randomWalk(n) {
     } else {
       world.setTerrain(x, y, terrainTypes.water);
       if (world.isPassable(x, y) && Math.random() < 0.01) {
-        new Monster(Monster.monsterTypes.squid).basicMove(x, y);
+        const monsterType = Monster.chooseMonsterType(mt => y <= mt.maxDepth);
+        if (monsterType) {
+          new Monster(monsterType).basicMove(x, y);
+        }
       }
     }
     for (;;) {

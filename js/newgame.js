@@ -15,7 +15,10 @@ function randomWalk(n) {
     } else {
       world.setTerrain(x, y, terrainTypes.water);
       if (world.isPassable(x, y) && Math.random() < 0.01) {
-        new Monster(Monster.monsterTypes.squid).basicMove(x, y);
+        const monsterType = Monster.chooseMonsterType(mt => y <= mt.maxDepth);
+        if (monsterType) {
+          new Monster(monsterType).basicMove(x, y);
+        }
       }
     }
     for (;;) {

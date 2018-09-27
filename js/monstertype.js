@@ -19,6 +19,7 @@ module.exports = [
     name: 'squid',
     baseDelay: 12,
     maxHp: 12,
-    frequency: 10
+    frequency: 10,
+    alive: true
   }
 ];

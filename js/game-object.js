@@ -51,7 +51,9 @@ class GameObject {
   updateIfPlayer() {
     if (this === world.player) {
       world.updateVisible();
-      world.ui.updateStatusArea();
+      if (world.ui) {
+        world.ui.updateStatusArea();
+      }
     }
   }
 

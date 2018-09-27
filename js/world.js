@@ -4,12 +4,12 @@ const permissiveFov = require('./permissive-fov.js');
 const fovTree = permissiveFov.fovTree.children();
 const pqueue = require('./pqueue.js');
 const database = require('./database.js');
-const { getIdFromXY, getXFromId, getYFromId } = require('./indexutil.js');
-const { pickle, unpickle } = require('./pickle.js');
-const { badColor } = require('./htmlutil.js');
+const {getIdFromXY, getXFromId, getYFromId} = require('./indexutil.js');
+const {pickle, unpickle} = require('./pickle.js');
+const {badColor} = require('./htmlutil.js');
 const assert = require('./assert.js');
 
-const { terrainTypes } = require('./terrain.js');
+const {terrainTypes} = require('./terrain.js');
 const TerrainGrid = require('./terrain-grid.js');
 
 const emptyArray = [];
@@ -290,7 +290,7 @@ class World {
     this.airDuration = json.airDuration;
   }
 
-  saveGame({ clearAll = false } = {}) {
+  saveGame({clearAll = false} = {}) {
     return new Promise((resolve, reject) => {
       const dead = this.player && this.player.dead;
       const transaction = this.database.transaction(

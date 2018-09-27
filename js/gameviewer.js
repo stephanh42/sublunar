@@ -14,11 +14,8 @@ const {
   goodColor,
   badColor
 } = require('./htmlutil.js');
-const {
-  ActiveEventHandler,
-  blockedEventHandler
-} = require('./event-handler.js');
-const { colorFromFraction } = require('./imgutil.js');
+const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
+const {colorFromFraction} = require('./imgutil.js');
 const assert = require('./assert.js');
 
 class Message {
@@ -235,7 +232,7 @@ class GameViewer extends CanvasViewer {
     } else {
       msg = 'Starting a new game.';
       newgame();
-      await world.saveGame({ clearAll: true });
+      await world.saveGame({clearAll: true});
     }
     await p1;
     await p2;

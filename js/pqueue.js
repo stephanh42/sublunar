@@ -69,7 +69,7 @@ function test(N = 10) {
   const input = [];
   const pq = [];
   for (let i = 0; i < N; i++) {
-    const obj = { time: Math.random(), order: i };
+    const obj = {time: Math.random(), order: i};
     insert(pq, obj);
     input.push(obj);
   }

@@ -2,8 +2,8 @@
 
 const world = require('./world.js');
 const pqueue = require('./pqueue.js');
-const { getIdFromXY } = require('./indexutil.js');
-const { registerClass } = require('./pickle.js');
+const {getIdFromXY} = require('./indexutil.js');
+const {registerClass} = require('./pickle.js');
 const assert = require('./assert.js');
 
 class GameObject {

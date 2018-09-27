@@ -1,9 +1,9 @@
 'use strict';
 
-const { terrainTypes } = require('./terrain.js');
+const {terrainTypes} = require('./terrain.js');
 const Monster = require('./monster.js');
 const world = require('./world.js');
-const { randomStep } = require('./randutil.js');
+const {randomStep} = require('./randutil.js');
 
 function randomWalk(n) {
   let x = 0;

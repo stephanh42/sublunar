@@ -1,7 +1,7 @@
 'use strict';
 
 const pqueue = require('./pqueue.js');
-const { getIdFromXY } = require('./indexutil.js');
+const {getIdFromXY} = require('./indexutil.js');
 
 class PathNode {
   constructor(heuristic, cost, order, x, y, previous) {

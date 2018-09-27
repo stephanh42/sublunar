@@ -1,7 +1,7 @@
 'use strict';
 
-const { getIdFromXY } = require('./indexutil.js');
-const { terrainList } = require('./terrain.js');
+const {getIdFromXY} = require('./indexutil.js');
+const {terrainList} = require('./terrain.js');
 
 function getTerrainIdFromXY(x, y) {
   return getIdFromXY(x >> 4, y >> 4);

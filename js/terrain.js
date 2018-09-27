@@ -1,6 +1,6 @@
 'use strict';
 
-const { loadImageSizes } = require('./imgutil.js');
+const {loadImageSizes} = require('./imgutil.js');
 
 async function awaitPromises(promises) {
   for (const promise of promises) {

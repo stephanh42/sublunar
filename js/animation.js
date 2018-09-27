@@ -32,7 +32,7 @@ class ObjectAnimation {
     gameObject,
     beginState,
     endState,
-    { sfunc = identity, animatePlayer = true } = {}
+    {sfunc = identity, animatePlayer = true} = {}
   ) {
     this.gameObject = gameObject;
     this.beginState = beginState;

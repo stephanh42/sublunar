@@ -1,15 +1,15 @@
 'use strict';
 
-const { loadImageSizes, healthBarDrawer } = require('./imgutil.js');
-const { awaitPromises } = require('./terrain.js');
-const { registerClass } = require('./pickle.js');
-const { randomInt, randomRange } = require('./randutil.js');
+const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
+const {awaitPromises} = require('./terrain.js');
+const {registerClass} = require('./pickle.js');
+const {randomInt, randomRange} = require('./randutil.js');
 const GameObject = require('./game-object.js');
 const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
-const { toTitleCase } = require('./textutil.js');
-const { goodColor, badColor } = require('./htmlutil.js');
+const {toTitleCase} = require('./textutil.js');
+const {goodColor, badColor} = require('./htmlutil.js');
 const assert = require('./assert.js');
 
 const monsterTypes = {};
@@ -22,6 +22,8 @@ function makeMonsterType(id, json) {
     intelligence: 10,
     hpRecovery: 1 / 24,
     maxDepth: Infinity,
+    frequency: 0,
+    imageName: null,
     images: null
   };
   Object.assign(result, json);
@@ -231,7 +233,7 @@ class Monster extends GameObject {
           this,
           new animation.State(time, this.x, this.y, oldVisible | 0),
           new animation.State(time + 100, victim.x, victim.y, newVisible | 0),
-          { sfunc: animation.bump, animatePlayer: false }
+          {sfunc: animation.bump, animatePlayer: false}
         )
       );
     }

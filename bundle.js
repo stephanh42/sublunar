@@ -33,7 +33,7 @@ class ObjectAnimation {
     gameObject,
     beginState,
     endState,
-    { sfunc = identity, animatePlayer = true } = {}
+    {sfunc = identity, animatePlayer = true} = {}
   ) {
     this.gameObject = gameObject;
     this.beginState = beginState;
@@ -263,8 +263,8 @@ exports.ActiveEventHandler = ActiveEventHandler;
 
 const world = require('./world.js');
 const pqueue = require('./pqueue.js');
-const { getIdFromXY } = require('./indexutil.js');
-const { registerClass } = require('./pickle.js');
+const {getIdFromXY} = require('./indexutil.js');
+const {registerClass} = require('./pickle.js');
 const assert = require('./assert.js');
 
 class GameObject {
@@ -393,11 +393,8 @@ const {
   goodColor,
   badColor
 } = require('./htmlutil.js');
-const {
-  ActiveEventHandler,
-  blockedEventHandler
-} = require('./event-handler.js');
-const { colorFromFraction } = require('./imgutil.js');
+const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
+const {colorFromFraction} = require('./imgutil.js');
 const assert = require('./assert.js');
 
 class Message {
@@ -614,7 +611,7 @@ class GameViewer extends CanvasViewer {
     } else {
       msg = 'Starting a new game.';
       newgame();
-      await world.saveGame({ clearAll: true });
+      await world.saveGame({clearAll: true});
     }
     await p1;
     await p2;
@@ -891,16 +888,16 @@ exports.getYFromId = xy => (xy << 16) >> 16;
 },{}],12:[function(require,module,exports){
 'use strict';
 
-const { loadImageSizes, healthBarDrawer } = require('./imgutil.js');
-const { awaitPromises } = require('./terrain.js');
-const { registerClass } = require('./pickle.js');
-const { randomInt, randomRange } = require('./randutil.js');
+const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
+const {awaitPromises} = require('./terrain.js');
+const {registerClass} = require('./pickle.js');
+const {randomInt, randomRange} = require('./randutil.js');
 const GameObject = require('./game-object.js');
 const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
-const { toTitleCase } = require('./textutil.js');
-const { goodColor, badColor } = require('./htmlutil.js');
+const {toTitleCase} = require('./textutil.js');
+const {goodColor, badColor} = require('./htmlutil.js');
 const assert = require('./assert.js');
 
 const monsterTypes = {};
@@ -913,6 +910,8 @@ function makeMonsterType(id, json) {
     intelligence: 10,
     hpRecovery: 1 / 24,
     maxDepth: Infinity,
+    frequency: 0,
+    imageName: null,
     images: null
   };
   Object.assign(result, json);
@@ -1122,7 +1121,7 @@ class Monster extends GameObject {
           this,
           new animation.State(time, this.x, this.y, oldVisible | 0),
           new animation.State(time + 100, victim.x, victim.y, newVisible | 0),
-          { sfunc: animation.bump, animatePlayer: false }
+          {sfunc: animation.bump, animatePlayer: false}
         )
       );
     }
@@ -1226,19 +1225,28 @@ module.exports = [
     hpRecovery: 1 / 12
   },
   {
+    name: 'Selenian submarine',
+    imageName: 'selenian-sub',
+    maxHp: 15,
+    maxDepth: 12,
+    hpRecovery: 1 / 20,
+    frequency: 5
+  },
+  {
     name: 'squid',
     baseDelay: 12,
-    maxHp: 12
+    maxHp: 12,
+    frequency: 10
   }
 ];
 
 },{}],14:[function(require,module,exports){
 'use strict';
 
-const { terrainTypes } = require('./terrain.js');
+const {terrainTypes} = require('./terrain.js');
 const Monster = require('./monster.js');
 const world = require('./world.js');
-const { randomStep } = require('./randutil.js');
+const {randomStep} = require('./randutil.js');
 
 function randomWalk(n) {
   let x = 0;
@@ -1280,7 +1288,7 @@ module.exports = newGame;
 'use strict';
 
 const pqueue = require('./pqueue.js');
-const { getIdFromXY } = require('./indexutil.js');
+const {getIdFromXY} = require('./indexutil.js');
 
 class PathNode {
   constructor(heuristic, cost, order, x, y, previous) {
@@ -1633,7 +1641,7 @@ function test(N = 10) {
   const input = [];
   const pq = [];
   for (let i = 0; i < N; i++) {
-    const obj = { time: Math.random(), order: i };
+    const obj = {time: Math.random(), order: i};
     insert(pq, obj);
     input.push(obj);
   }
@@ -1686,8 +1694,8 @@ exports.randomRange = randomRange;
 },{}],20:[function(require,module,exports){
 'use strict';
 
-const { getIdFromXY } = require('./indexutil.js');
-const { terrainList } = require('./terrain.js');
+const {getIdFromXY} = require('./indexutil.js');
+const {terrainList} = require('./terrain.js');
 
 function getTerrainIdFromXY(x, y) {
   return getIdFromXY(x >> 4, y >> 4);
@@ -1752,7 +1760,7 @@ module.exports = TerrainGrid;
 },{"./indexutil.js":11,"./terrain.js":21}],21:[function(require,module,exports){
 'use strict';
 
-const { loadImageSizes } = require('./imgutil.js');
+const {loadImageSizes} = require('./imgutil.js');
 
 async function awaitPromises(promises) {
   for (const promise of promises) {
@@ -1853,12 +1861,12 @@ const permissiveFov = require('./permissive-fov.js');
 const fovTree = permissiveFov.fovTree.children();
 const pqueue = require('./pqueue.js');
 const database = require('./database.js');
-const { getIdFromXY, getXFromId, getYFromId } = require('./indexutil.js');
-const { pickle, unpickle } = require('./pickle.js');
-const { badColor } = require('./htmlutil.js');
+const {getIdFromXY, getXFromId, getYFromId} = require('./indexutil.js');
+const {pickle, unpickle} = require('./pickle.js');
+const {badColor} = require('./htmlutil.js');
 const assert = require('./assert.js');
 
-const { terrainTypes } = require('./terrain.js');
+const {terrainTypes} = require('./terrain.js');
 const TerrainGrid = require('./terrain-grid.js');
 
 const emptyArray = [];
@@ -2139,7 +2147,7 @@ class World {
     this.airDuration = json.airDuration;
   }
 
-  saveGame({ clearAll = false } = {}) {
+  saveGame({clearAll = false} = {}) {
     return new Promise((resolve, reject) => {
       const dead = this.player && this.player.dead;
       const transaction = this.database.transaction(

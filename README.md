@@ -24,4 +24,5 @@ You can either use the traditional VI/Roguelike keys or the numpad keys.
 The arrow keys also work but those don't allow you to move diagonally.
 You can also click with the mouse on a tile adjacent to your submarine.
 
-Use + and - to zoom in/zoom out.
+* Use + and - to zoom in/zoom out.
+* Press T to fire a torpedo.

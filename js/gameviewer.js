@@ -14,7 +14,11 @@ const {
   goodColor,
   badColor
 } = require('./htmlutil.js');
-const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
+const {
+  ActiveEventHandler,
+  blockedEventHandler,
+  SelectionEventHandler
+} = require('./event-handler.js');
 const {colorFromFraction} = require('./imgutil.js');
 const assert = require('./assert.js');
 
@@ -123,16 +127,45 @@ class StatusArea {
 }
 
 class UserInterface {
-  constructor(gameViewer, messageArea, statusArea) {
+  constructor(gameViewer) {
+    const messageArea = document.getElementById('messageArea');
+    const statusArea = document.getElementById('statusArea');
+    const questionArea = document.getElementById('questionArea');
+
     this.gameViewer = gameViewer;
     this.messageArea = messageArea;
+    this.questionArea = questionArea;
     this.statusArea = new StatusArea(statusArea);
     this.lastMessage = null;
     messageArea.addEventListener('click', () => this.clearMessageArea());
+    questionArea.addEventListener('click', () => this.clearQuestionArea());
   }
 
   redraw() {
     return this.gameViewer.redraw();
+  }
+
+  async selectTile(message) {
+    const player = world.player;
+    if (!player) {
+      return null;
+    }
+    const selectHandler = new SelectionEventHandler(
+      this.gameViewer,
+      player.x,
+      player.y,
+      message
+    );
+    this.gameViewer.eventHandlers.push(selectHandler);
+    let result = null;
+    try {
+      result = await selectHandler.resultPromise;
+    } finally {
+      this.gameViewer.eventHandlers.pop();
+      this.clearQuestionArea();
+      this.redraw();
+    }
+    return result;
   }
 
   async animate(animation) {
@@ -161,20 +194,32 @@ class UserInterface {
     this.lastMessage = null;
   }
 
+  questionAreaMessage(message, color = 'white') {
+    this.questionArea.appendChild(
+      makeElement('div', 'message-span', message, color)
+    );
+  }
+
+  clearQuestionArea() {
+    removeAllChildren(this.questionArea);
+  }
+
   updateStatusArea() {
     this.statusArea.update();
   }
 }
 
 class GameViewer extends CanvasViewer {
-  constructor(canvas, messageArea, statusArea) {
+  constructor() {
+    const canvas = document.getElementById('theCanvas');
     super(canvas);
     this.eventHandlers = [new ActiveEventHandler(this)];
     this.animation = null;
     const dpi = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     this.dpi = dpi;
     this.tileSize = 8 * Math.round(dpi * 5);
-    this.ui = world.ui = new UserInterface(this, messageArea, statusArea);
+    this.ui = world.ui = new UserInterface(this);
+
     document.addEventListener(
       'keydown',
       evt => this.eventHandler().onkeydown(evt),
@@ -239,6 +284,23 @@ class GameViewer extends CanvasViewer {
     this.ui.updateStatusArea();
     this.ui.clearMessageArea();
     this.ui.message(msg, 'yellow');
+  }
+
+  drawSelection(ctx, x, y) {
+    const tileSize = this.tileSize;
+    const borderSize = 2;
+    const fullTileSize = tileSize + borderSize;
+
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.rect(
+      x * fullTileSize - 0.5,
+      y * fullTileSize - 0.5,
+      tileSize + 1,
+      tileSize + 1
+    );
+    ctx.stroke();
   }
 
   draw(time) {
@@ -337,11 +399,10 @@ class GameViewer extends CanvasViewer {
       }
     }
     if (!this.isBlocked()) {
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.rect(-0.5, -0.5, tileSize + 1, tileSize + 1);
-      ctx.stroke();
+      const pos = this.eventHandler().getSelected();
+      if (pos) {
+        this.drawSelection(ctx, pos[0] - px, pos[1] - py);
+      }
     }
     ctx.restore();
   }

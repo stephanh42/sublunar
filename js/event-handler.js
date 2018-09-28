@@ -1,5 +1,7 @@
 'use strict';
 
+const world = require('./world.js');
+
 const keyToDirection = {
   h: [-1, 0],
   j: [0, 1],
@@ -30,6 +32,10 @@ const keyToDirection = {
 };
 
 class BlockedEventHandler {
+  getSelected() {
+    return null;
+  }
+
   isActive() {
     return false;
   }
@@ -38,13 +44,52 @@ class BlockedEventHandler {
   onclick() {}
 }
 
-class ActiveEventHandler {
+class ViewerEventHandler extends BlockedEventHandler {
   constructor(canvasViewer) {
+    super();
     this.canvasViewer = canvasViewer;
   }
 
   isActive() {
     return true;
+  }
+
+  getRelativeTile(evt) {
+    const canvasViewer = this.canvasViewer;
+    const [x, y] = canvasViewer.getMousePos(evt);
+
+    const tileSize = canvasViewer.tileSize;
+    const borderSize = 2;
+    const fullTileSize = tileSize + borderSize;
+    const canvas = canvasViewer.canvas;
+
+    const cx = (canvas.width - fullTileSize) >> 1;
+    const cy = (canvas.height - fullTileSize) >> 1;
+
+    const tileX = Math.floor((x - cx) / fullTileSize);
+    const tileY = Math.floor((y - cy) / fullTileSize);
+
+    return [tileX, tileY];
+  }
+
+  getWorldTile(evt) {
+    const player = world.player;
+    if (!player) {
+      return null;
+    }
+    const [x, y] = this.getRelativeTile(evt);
+    return [x + player.x, y + player.y];
+  }
+}
+
+class ActiveEventHandler extends ViewerEventHandler {
+  getSelected() {
+    const player = world.player;
+    if (player) {
+      return [player.x, player.y];
+    } else {
+      return null;
+    }
   }
 
   onkeydown(evt) {
@@ -59,32 +104,67 @@ class ActiveEventHandler {
     } else if (evt.key === '-') {
       canvasViewer.tileSize = Math.max(32, canvasViewer.tileSize - 8);
       canvasViewer.redraw();
+    } else if (evt.key === 'T') {
+      this.canvasViewer.ui
+        .selectTile('Select target for torpedo.')
+        .then(console.log, console.error);
     }
   }
 
   onclick(evt) {
-    const canvasViewer = this.canvasViewer;
-    const [x, y] = canvasViewer.getMousePos(evt);
-
-    const tileSize = canvasViewer.tileSize;
-    const borderSize = 2;
-    const fullTileSize = tileSize + borderSize;
-    const canvas = canvasViewer.canvas;
-
-    const cx = (canvas.width - fullTileSize) >> 1;
-    const cy = (canvas.height - fullTileSize) >> 1;
-
-    const tileX = Math.floor((x - cx) / fullTileSize);
-    const tileY = Math.floor((y - cy) / fullTileSize);
+    const [tileX, tileY] = this.getRelativeTile(evt);
     if (
       Math.abs(tileX) <= 1 &&
       Math.abs(tileY) <= 1 &&
       (tileX !== 0 || tileY !== 0)
     ) {
-      canvasViewer.playerMove(tileX, tileY);
+      this.canvasViewer.playerMove(tileX, tileY);
     }
+  }
+}
+
+class SelectionEventHandler extends ViewerEventHandler {
+  constructor(canvasViewer, x, y, message) {
+    super(canvasViewer);
+    this.x = x;
+    this.y = y;
+    this.ui = canvasViewer.ui;
+    this.resolve = null;
+    this.resultPromise = new Promise(resolve => {
+      this.resolve = resolve;
+    });
+    this.ui.clearMessageArea();
+    this.ui.questionAreaMessage(message);
+    this.ui.questionAreaMessage('Use direction keys to move.', 'yellow');
+    this.ui.questionAreaMessage(
+      'Press Enter to select, Escape to abort.',
+      'yellow'
+    );
+  }
+
+  getSelected() {
+    return [this.x, this.y];
+  }
+
+  onkeydown(evt) {
+    const direction = keyToDirection[evt.key];
+    if (direction) {
+      const [dx, dy] = direction;
+      this.x += dx;
+      this.y += dy;
+      this.canvasViewer.redraw();
+    } else if (evt.key === 'Enter') {
+      this.resolve([this.x, this.y]);
+    } else if (evt.key === 'Escape') {
+      this.resolve(null);
+    }
+  }
+
+  onclick(evt) {
+    this.resolve(this.getWorldTile(evt));
   }
 }
 
 exports.blockedEventHandler = new BlockedEventHandler();
 exports.ActiveEventHandler = ActiveEventHandler;
+exports.SelectionEventHandler = SelectionEventHandler;

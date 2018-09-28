@@ -23,5 +23,12 @@ module.exports = [
     maxHp: 12,
     frequency: 10,
     alive: true
+  },
+  {
+    name: 'torpedo',
+    maxHp: 5,
+    baseDelay: 2,
+    hpRecovery: 0,
+    meleeVerb: 'blows up'
   }
 ];

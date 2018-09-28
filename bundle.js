@@ -169,6 +169,8 @@ exports.openDatabase = openDatabase;
 },{}],5:[function(require,module,exports){
 'use strict';
 
+const world = require('./world.js');
+
 const keyToDirection = {
   h: [-1, 0],
   j: [0, 1],
@@ -199,6 +201,10 @@ const keyToDirection = {
 };
 
 class BlockedEventHandler {
+  getSelected() {
+    return null;
+  }
+
   isActive() {
     return false;
   }
@@ -207,13 +213,52 @@ class BlockedEventHandler {
   onclick() {}
 }
 
-class ActiveEventHandler {
+class ViewerEventHandler extends BlockedEventHandler {
   constructor(canvasViewer) {
+    super();
     this.canvasViewer = canvasViewer;
   }
 
   isActive() {
     return true;
+  }
+
+  getRelativeTile(evt) {
+    const canvasViewer = this.canvasViewer;
+    const [x, y] = canvasViewer.getMousePos(evt);
+
+    const tileSize = canvasViewer.tileSize;
+    const borderSize = 2;
+    const fullTileSize = tileSize + borderSize;
+    const canvas = canvasViewer.canvas;
+
+    const cx = (canvas.width - fullTileSize) >> 1;
+    const cy = (canvas.height - fullTileSize) >> 1;
+
+    const tileX = Math.floor((x - cx) / fullTileSize);
+    const tileY = Math.floor((y - cy) / fullTileSize);
+
+    return [tileX, tileY];
+  }
+
+  getWorldTile(evt) {
+    const player = world.player;
+    if (!player) {
+      return null;
+    }
+    const [x, y] = this.getRelativeTile(evt);
+    return [x + player.x, y + player.y];
+  }
+}
+
+class ActiveEventHandler extends ViewerEventHandler {
+  getSelected() {
+    const player = world.player;
+    if (player) {
+      return [player.x, player.y];
+    } else {
+      return null;
+    }
   }
 
   onkeydown(evt) {
@@ -228,37 +273,72 @@ class ActiveEventHandler {
     } else if (evt.key === '-') {
       canvasViewer.tileSize = Math.max(32, canvasViewer.tileSize - 8);
       canvasViewer.redraw();
+    } else if (evt.key === 'T') {
+      this.canvasViewer.ui
+        .selectTile('Select target for torpedo.')
+        .then(console.log, console.error);
     }
   }
 
   onclick(evt) {
-    const canvasViewer = this.canvasViewer;
-    const [x, y] = canvasViewer.getMousePos(evt);
-
-    const tileSize = canvasViewer.tileSize;
-    const borderSize = 2;
-    const fullTileSize = tileSize + borderSize;
-    const canvas = canvasViewer.canvas;
-
-    const cx = (canvas.width - fullTileSize) >> 1;
-    const cy = (canvas.height - fullTileSize) >> 1;
-
-    const tileX = Math.floor((x - cx) / fullTileSize);
-    const tileY = Math.floor((y - cy) / fullTileSize);
+    const [tileX, tileY] = this.getRelativeTile(evt);
     if (
       Math.abs(tileX) <= 1 &&
       Math.abs(tileY) <= 1 &&
       (tileX !== 0 || tileY !== 0)
     ) {
-      canvasViewer.playerMove(tileX, tileY);
+      this.canvasViewer.playerMove(tileX, tileY);
     }
+  }
+}
+
+class SelectionEventHandler extends ViewerEventHandler {
+  constructor(canvasViewer, x, y, message) {
+    super(canvasViewer);
+    this.x = x;
+    this.y = y;
+    this.ui = canvasViewer.ui;
+    this.resolve = null;
+    this.resultPromise = new Promise(resolve => {
+      this.resolve = resolve;
+    });
+    this.ui.clearMessageArea();
+    this.ui.questionAreaMessage(message);
+    this.ui.questionAreaMessage('Use direction keys to move.', 'yellow');
+    this.ui.questionAreaMessage(
+      'Press Enter to select, Escape to abort.',
+      'yellow'
+    );
+  }
+
+  getSelected() {
+    return [this.x, this.y];
+  }
+
+  onkeydown(evt) {
+    const direction = keyToDirection[evt.key];
+    if (direction) {
+      const [dx, dy] = direction;
+      this.x += dx;
+      this.y += dy;
+      this.canvasViewer.redraw();
+    } else if (evt.key === 'Enter') {
+      this.resolve([this.x, this.y]);
+    } else if (evt.key === 'Escape') {
+      this.resolve(null);
+    }
+  }
+
+  onclick(evt) {
+    this.resolve(this.getWorldTile(evt));
   }
 }
 
 exports.blockedEventHandler = new BlockedEventHandler();
 exports.ActiveEventHandler = ActiveEventHandler;
+exports.SelectionEventHandler = SelectionEventHandler;
 
-},{}],6:[function(require,module,exports){
+},{"./world.js":24}],6:[function(require,module,exports){
 'use strict';
 
 const world = require('./world.js');
@@ -395,7 +475,11 @@ const {
   goodColor,
   badColor
 } = require('./htmlutil.js');
-const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
+const {
+  ActiveEventHandler,
+  blockedEventHandler,
+  SelectionEventHandler
+} = require('./event-handler.js');
 const {colorFromFraction} = require('./imgutil.js');
 const assert = require('./assert.js');
 
@@ -504,16 +588,45 @@ class StatusArea {
 }
 
 class UserInterface {
-  constructor(gameViewer, messageArea, statusArea) {
+  constructor(gameViewer) {
+    const messageArea = document.getElementById('messageArea');
+    const statusArea = document.getElementById('statusArea');
+    const questionArea = document.getElementById('questionArea');
+
     this.gameViewer = gameViewer;
     this.messageArea = messageArea;
+    this.questionArea = questionArea;
     this.statusArea = new StatusArea(statusArea);
     this.lastMessage = null;
     messageArea.addEventListener('click', () => this.clearMessageArea());
+    questionArea.addEventListener('click', () => this.clearQuestionArea());
   }
 
   redraw() {
     return this.gameViewer.redraw();
+  }
+
+  async selectTile(message) {
+    const player = world.player;
+    if (!player) {
+      return null;
+    }
+    const selectHandler = new SelectionEventHandler(
+      this.gameViewer,
+      player.x,
+      player.y,
+      message
+    );
+    this.gameViewer.eventHandlers.push(selectHandler);
+    let result = null;
+    try {
+      result = await selectHandler.resultPromise;
+    } finally {
+      this.gameViewer.eventHandlers.pop();
+      this.clearQuestionArea();
+      this.redraw();
+    }
+    return result;
   }
 
   async animate(animation) {
@@ -542,20 +655,32 @@ class UserInterface {
     this.lastMessage = null;
   }
 
+  questionAreaMessage(message, color = 'white') {
+    this.questionArea.appendChild(
+      makeElement('div', 'message-span', message, color)
+    );
+  }
+
+  clearQuestionArea() {
+    removeAllChildren(this.questionArea);
+  }
+
   updateStatusArea() {
     this.statusArea.update();
   }
 }
 
 class GameViewer extends CanvasViewer {
-  constructor(canvas, messageArea, statusArea) {
+  constructor() {
+    const canvas = document.getElementById('theCanvas');
     super(canvas);
     this.eventHandlers = [new ActiveEventHandler(this)];
     this.animation = null;
     const dpi = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     this.dpi = dpi;
     this.tileSize = 8 * Math.round(dpi * 5);
-    this.ui = world.ui = new UserInterface(this, messageArea, statusArea);
+    this.ui = world.ui = new UserInterface(this);
+
     document.addEventListener(
       'keydown',
       evt => this.eventHandler().onkeydown(evt),
@@ -620,6 +745,23 @@ class GameViewer extends CanvasViewer {
     this.ui.updateStatusArea();
     this.ui.clearMessageArea();
     this.ui.message(msg, 'yellow');
+  }
+
+  drawSelection(ctx, x, y) {
+    const tileSize = this.tileSize;
+    const borderSize = 2;
+    const fullTileSize = tileSize + borderSize;
+
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.rect(
+      x * fullTileSize - 0.5,
+      y * fullTileSize - 0.5,
+      tileSize + 1,
+      tileSize + 1
+    );
+    ctx.stroke();
   }
 
   draw(time) {
@@ -718,11 +860,10 @@ class GameViewer extends CanvasViewer {
       }
     }
     if (!this.isBlocked()) {
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.rect(-0.5, -0.5, tileSize + 1, tileSize + 1);
-      ctx.stroke();
+      const pos = this.eventHandler().getSelected();
+      if (pos) {
+        this.drawSelection(ctx, pos[0] - px, pos[1] - py);
+      }
     }
     ctx.restore();
   }
@@ -871,10 +1012,7 @@ exports.healthBarDrawer = new HealthBarDrawer();
 
 const GameViewer = require('./gameviewer.js');
 
-const canvas = document.getElementById('theCanvas');
-const messageArea = document.getElementById('messageArea');
-const statusArea = document.getElementById('statusArea');
-const gameViewer = new GameViewer(canvas, messageArea, statusArea);
+const gameViewer = new GameViewer();
 gameViewer.redrawOnWindowResize();
 gameViewer.redraw().then(console.log, console.error);
 
@@ -1266,6 +1404,13 @@ module.exports = [
     maxHp: 12,
     frequency: 10,
     alive: true
+  },
+  {
+    name: 'torpedo',
+    maxHp: 5,
+    baseDelay: 2,
+    hpRecovery: 0,
+    meleeVerb: 'blows up'
   }
 ];
 

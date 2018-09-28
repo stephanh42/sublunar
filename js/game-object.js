@@ -42,6 +42,8 @@ class GameObject {
     this.flags = json.flags || 0;
   }
 
+  postLoad() {}
+
   markDirty() {
     if (this.isPlaced) {
       world.dirtyGameObjects.add(getIdFromXY(this.x, this.y));
@@ -109,7 +111,7 @@ class GameObject {
   }
 
   isBlocking() {
-    return this.isMonster();
+    return false;
   }
 }
 

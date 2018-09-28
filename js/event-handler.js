@@ -105,9 +105,7 @@ class ActiveEventHandler extends ViewerEventHandler {
       canvasViewer.tileSize = Math.max(32, canvasViewer.tileSize - 8);
       canvasViewer.redraw();
     } else if (evt.key === 'T') {
-      this.canvasViewer.ui
-        .selectTile('Select target for torpedo.')
-        .then(console.log, console.error);
+      canvasViewer.handlePromise(() => canvasViewer.playerTorpedo());
     }
   }
 

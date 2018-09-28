@@ -5,7 +5,7 @@ const fovTree = permissiveFov.fovTree.children();
 const pqueue = require('./pqueue.js');
 const database = require('./database.js');
 const {getIdFromXY, getXFromId, getYFromId} = require('./indexutil.js');
-const {pickle, unpickle} = require('./pickle.js');
+const {pickle, unpickle, getReference} = require('./pickle.js');
 const {badColor} = require('./htmlutil.js');
 const assert = require('./assert.js');
 
@@ -13,10 +13,6 @@ const {terrainTypes} = require('./terrain.js');
 const TerrainGrid = require('./terrain-grid.js');
 
 const emptyArray = [];
-
-function getReference(gameObj) {
-  return gameObj ? gameObj.getReference() : null;
-}
 
 function pickleAction(action) {
   action = Object.assign({}, action);
@@ -288,6 +284,11 @@ class World {
     this.player = this.resolveReference(json.player);
     this.lastAirTime = json.lastAirTime;
     this.airDuration = json.airDuration;
+    for (const [, ar] of this.gameObjects) {
+      for (const gameObject of ar) {
+        gameObject.postLoad(this);
+      }
+    }
   }
 
   saveGame({clearAll = false} = {}) {

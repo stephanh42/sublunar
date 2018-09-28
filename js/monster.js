@@ -2,7 +2,7 @@
 
 const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
-const {registerClass} = require('./pickle.js');
+const {registerClass, getReference} = require('./pickle.js');
 const {randomInt, randomRange} = require('./randutil.js');
 const GameObject = require('./game-object.js');
 const world = require('./world.js');
@@ -25,6 +25,8 @@ function makeMonsterType(id, json) {
     frequency: 0,
     meleeVerb: 'attacks',
     alive: false,
+    isBlocking: true,
+    kamikaze: false,
     imageName: null,
     images: null
   };
@@ -69,6 +71,7 @@ class Monster extends GameObject {
     this.baseHp = monsterType ? monsterType.maxHp : 0;
     this.baseHpTime = 0;
     this.direction = randomInt(2) === 0;
+    this.target = null;
   }
 
   static chooseMonsterType(filter = () => true) {
@@ -114,6 +117,7 @@ class Monster extends GameObject {
     json.mt = this.monsterType.id;
     json.hp = this.baseHp;
     json.hpTime = this.baseHpTime;
+    json.target = getReference(this.target);
     return json;
   }
 
@@ -122,6 +126,11 @@ class Monster extends GameObject {
     this.monsterType = monsterList[json.mt];
     this.baseHp = json.hp;
     this.baseHpTime = json.hpTime;
+    this.target = json.target;
+  }
+
+  postLoad(world) {
+    this.target = world.resolveReference(this.target);
   }
 
   getHp() {
@@ -241,6 +250,7 @@ class Monster extends GameObject {
     const hp = randomRange(1, 4);
     this.setDirection(victim.x - this.x);
     this.sleep(this.monsterType.baseDelay);
+    const kamikaze = this.monsterType.kamikaze;
     if (oldVisible || newVisible) {
       const time = world.ui.now();
       const meleeVerb = this.monsterType.meleeVerb;
@@ -254,9 +264,15 @@ class Monster extends GameObject {
           this,
           new animation.State(time, this.x, this.y, oldVisible | 0),
           new animation.State(time + 100, victim.x, victim.y, newVisible | 0),
-          {sfunc: animation.bump, animatePlayer: false}
+          {
+            sfunc: kamikaze ? animation.identity : animation.bump,
+            animatePlayer: false
+          }
         )
       );
+    }
+    if (kamikaze) {
+      await this.blowUp();
     }
     return victim.doDamage(hp);
   }
@@ -272,7 +288,10 @@ class Monster extends GameObject {
     );
   }
 
-  target() {
+  getTarget() {
+    if (this.target) {
+      return this.target.dead ? null : this.target;
+    }
     const player = world.player;
     if (player.isPlaced && !player.dead) {
       return player;
@@ -284,7 +303,7 @@ class Monster extends GameObject {
   async wakeUp() {
     this.waiting = false;
     if (!this.isPlayer()) {
-      const target = this.target();
+      const target = this.getTarget();
       if (target) {
         const pf = new MonsterPathFinder(
           this.x,
@@ -303,8 +322,17 @@ class Monster extends GameObject {
             return this.doAttack(target);
           }
         }
+      } else if (this.monsterType.kamikaze) {
+        return this.blowUp();
       }
     }
+  }
+
+  blowUp() {
+    return this.doDamage(
+      Infinity,
+      `${toTitleCase(this.theName())} blows itself up.`
+    );
   }
 
   async checkDepth() {
@@ -340,6 +368,10 @@ class Monster extends GameObject {
 
   isMonster() {
     return !this.dead;
+  }
+
+  isBlocking() {
+    return this.monsterType.isBlocking;
   }
 }
 

@@ -274,9 +274,7 @@ class ActiveEventHandler extends ViewerEventHandler {
       canvasViewer.tileSize = Math.max(32, canvasViewer.tileSize - 8);
       canvasViewer.redraw();
     } else if (evt.key === 'T') {
-      this.canvasViewer.ui
-        .selectTile('Select target for torpedo.')
-        .then(console.log, console.error);
+      canvasViewer.handlePromise(() => canvasViewer.playerTorpedo());
     }
   }
 
@@ -383,6 +381,8 @@ class GameObject {
     this.flags = json.flags || 0;
   }
 
+  postLoad() {}
+
   markDirty() {
     if (this.isPlaced) {
       world.dirtyGameObjects.add(getIdFromXY(this.x, this.y));
@@ -450,7 +450,7 @@ class GameObject {
   }
 
   isBlocking() {
-    return this.isMonster();
+    return false;
   }
 }
 
@@ -608,7 +608,7 @@ class UserInterface {
 
   async selectTile(message) {
     const player = world.player;
-    if (!player) {
+    if (!player || player.dead) {
       return null;
     }
     const selectHandler = new SelectionEventHandler(
@@ -703,17 +703,27 @@ class GameViewer extends CanvasViewer {
     );
   }
 
-  async handlePromise(promise) {
+  handleError(err) {
+    this.ui.message('There is an error in the code.', badColor);
+    this.ui.message(err.message, 'yellow');
+    console.error(err);
+  }
+
+  eatError(promise) {
+    return promise.error(err => this.handleError(err));
+  }
+
+  async handlePromise(promiseFunc) {
     this.eventHandlers.push(blockedEventHandler);
     try {
-      await promise;
+      await promiseFunc();
       await world.runSchedule();
       performance.mark('saveGame-start');
       await world.saveGame();
       performance.mark('saveGame-end');
       performance.measure('saveGame', 'saveGame-start', 'saveGame-end');
     } catch (err) {
-      console.error(err);
+      this.handleError(err);
     } finally {
       assert(this.eventHandlers.pop() === blockedEventHandler);
       this.redraw();
@@ -723,7 +733,34 @@ class GameViewer extends CanvasViewer {
   playerMove(dx, dy) {
     if (world.player && !world.player.dead) {
       this.ui.clearMessageArea();
-      return this.handlePromise(world.tryPlayerMove(dx, dy));
+      return this.handlePromise(() => world.tryPlayerMove(dx, dy));
+    }
+  }
+
+  async playerTorpedo() {
+    const pos = await this.ui.selectTile('Choose a target for your torpedo.');
+    if (!pos) {
+      return;
+    }
+    const [x, y] = pos;
+    if (!world.isVisible(x, y)) {
+      this.ui.message('You see no target there.');
+      return;
+    }
+    const target = world.getMonster(x, y);
+    const player = world.player;
+    if (target === player) {
+      this.ui.message('You cowardly refuse to torpedo yourself');
+    } else if (!target) {
+      this.ui.message('There appears to be nobody there.');
+    } else {
+      const torpedo = new Monster(Monster.monsterTypes.torpedo);
+      torpedo.direction = player.direction;
+      torpedo.target = target;
+      torpedo.basicMove(player.x, player.y);
+      torpedo.sleep(0);
+      player.sleep(player.monsterType.baseDelay);
+      return this.redraw();
     }
   }
 
@@ -1030,7 +1067,7 @@ exports.getYFromId = xy => (xy << 16) >> 16;
 
 const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
-const {registerClass} = require('./pickle.js');
+const {registerClass, getReference} = require('./pickle.js');
 const {randomInt, randomRange} = require('./randutil.js');
 const GameObject = require('./game-object.js');
 const world = require('./world.js');
@@ -1053,6 +1090,8 @@ function makeMonsterType(id, json) {
     frequency: 0,
     meleeVerb: 'attacks',
     alive: false,
+    isBlocking: true,
+    kamikaze: false,
     imageName: null,
     images: null
   };
@@ -1097,6 +1136,7 @@ class Monster extends GameObject {
     this.baseHp = monsterType ? monsterType.maxHp : 0;
     this.baseHpTime = 0;
     this.direction = randomInt(2) === 0;
+    this.target = null;
   }
 
   static chooseMonsterType(filter = () => true) {
@@ -1142,6 +1182,7 @@ class Monster extends GameObject {
     json.mt = this.monsterType.id;
     json.hp = this.baseHp;
     json.hpTime = this.baseHpTime;
+    json.target = getReference(this.target);
     return json;
   }
 
@@ -1150,6 +1191,11 @@ class Monster extends GameObject {
     this.monsterType = monsterList[json.mt];
     this.baseHp = json.hp;
     this.baseHpTime = json.hpTime;
+    this.target = json.target;
+  }
+
+  postLoad(world) {
+    this.target = world.resolveReference(this.target);
   }
 
   getHp() {
@@ -1269,6 +1315,7 @@ class Monster extends GameObject {
     const hp = randomRange(1, 4);
     this.setDirection(victim.x - this.x);
     this.sleep(this.monsterType.baseDelay);
+    const kamikaze = this.monsterType.kamikaze;
     if (oldVisible || newVisible) {
       const time = world.ui.now();
       const meleeVerb = this.monsterType.meleeVerb;
@@ -1282,9 +1329,15 @@ class Monster extends GameObject {
           this,
           new animation.State(time, this.x, this.y, oldVisible | 0),
           new animation.State(time + 100, victim.x, victim.y, newVisible | 0),
-          {sfunc: animation.bump, animatePlayer: false}
+          {
+            sfunc: kamikaze ? animation.identity : animation.bump,
+            animatePlayer: false
+          }
         )
       );
+    }
+    if (kamikaze) {
+      await this.blowUp();
     }
     return victim.doDamage(hp);
   }
@@ -1300,7 +1353,10 @@ class Monster extends GameObject {
     );
   }
 
-  target() {
+  getTarget() {
+    if (this.target) {
+      return this.target.dead ? null : this.target;
+    }
     const player = world.player;
     if (player.isPlaced && !player.dead) {
       return player;
@@ -1312,7 +1368,7 @@ class Monster extends GameObject {
   async wakeUp() {
     this.waiting = false;
     if (!this.isPlayer()) {
-      const target = this.target();
+      const target = this.getTarget();
       if (target) {
         const pf = new MonsterPathFinder(
           this.x,
@@ -1331,8 +1387,17 @@ class Monster extends GameObject {
             return this.doAttack(target);
           }
         }
+      } else if (this.monsterType.kamikaze) {
+        return this.blowUp();
       }
     }
+  }
+
+  blowUp() {
+    return this.doDamage(
+      Infinity,
+      `${toTitleCase(this.theName())} blows itself up.`
+    );
   }
 
   async checkDepth() {
@@ -1368,6 +1433,10 @@ class Monster extends GameObject {
 
   isMonster() {
     return !this.dead;
+  }
+
+  isBlocking() {
+    return this.monsterType.isBlocking;
   }
 }
 
@@ -1410,7 +1479,9 @@ module.exports = [
     maxHp: 5,
     baseDelay: 2,
     hpRecovery: 0,
-    meleeVerb: 'blows up'
+    meleeVerb: 'explodes at',
+    isBlocking: false,
+    kamikaze: true
   }
 ];
 
@@ -1742,9 +1813,14 @@ function unpickle(json) {
   return result;
 }
 
+function getReference(gameObj) {
+  return gameObj ? gameObj.getReference() : null;
+}
+
 exports.registerClass = registerClass;
 exports.pickle = pickle;
 exports.unpickle = unpickle;
+exports.getReference = getReference;
 
 },{"./assert.js":2}],18:[function(require,module,exports){
 'use strict';
@@ -2039,7 +2115,7 @@ const fovTree = permissiveFov.fovTree.children();
 const pqueue = require('./pqueue.js');
 const database = require('./database.js');
 const {getIdFromXY, getXFromId, getYFromId} = require('./indexutil.js');
-const {pickle, unpickle} = require('./pickle.js');
+const {pickle, unpickle, getReference} = require('./pickle.js');
 const {badColor} = require('./htmlutil.js');
 const assert = require('./assert.js');
 
@@ -2047,10 +2123,6 @@ const {terrainTypes} = require('./terrain.js');
 const TerrainGrid = require('./terrain-grid.js');
 
 const emptyArray = [];
-
-function getReference(gameObj) {
-  return gameObj ? gameObj.getReference() : null;
-}
 
 function pickleAction(action) {
   action = Object.assign({}, action);
@@ -2322,6 +2394,11 @@ class World {
     this.player = this.resolveReference(json.player);
     this.lastAirTime = json.lastAirTime;
     this.airDuration = json.airDuration;
+    for (const [, ar] of this.gameObjects) {
+      for (const gameObject of ar) {
+        gameObject.postLoad(this);
+      }
+    }
   }
 
   saveGame({clearAll = false} = {}) {

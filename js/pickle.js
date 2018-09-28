@@ -30,6 +30,11 @@ function unpickle(json) {
   return result;
 }
 
+function getReference(gameObj) {
+  return gameObj ? gameObj.getReference() : null;
+}
+
 exports.registerClass = registerClass;
 exports.pickle = pickle;
 exports.unpickle = unpickle;
+exports.getReference = getReference;

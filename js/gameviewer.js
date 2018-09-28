@@ -147,7 +147,7 @@ class UserInterface {
 
   async selectTile(message) {
     const player = world.player;
-    if (!player) {
+    if (!player || player.dead) {
       return null;
     }
     const selectHandler = new SelectionEventHandler(
@@ -242,17 +242,27 @@ class GameViewer extends CanvasViewer {
     );
   }
 
-  async handlePromise(promise) {
+  handleError(err) {
+    this.ui.message('There is an error in the code.', badColor);
+    this.ui.message(err.message, 'yellow');
+    console.error(err);
+  }
+
+  eatError(promise) {
+    return promise.error(err => this.handleError(err));
+  }
+
+  async handlePromise(promiseFunc) {
     this.eventHandlers.push(blockedEventHandler);
     try {
-      await promise;
+      await promiseFunc();
       await world.runSchedule();
       performance.mark('saveGame-start');
       await world.saveGame();
       performance.mark('saveGame-end');
       performance.measure('saveGame', 'saveGame-start', 'saveGame-end');
     } catch (err) {
-      console.error(err);
+      this.handleError(err);
     } finally {
       assert(this.eventHandlers.pop() === blockedEventHandler);
       this.redraw();
@@ -262,7 +272,34 @@ class GameViewer extends CanvasViewer {
   playerMove(dx, dy) {
     if (world.player && !world.player.dead) {
       this.ui.clearMessageArea();
-      return this.handlePromise(world.tryPlayerMove(dx, dy));
+      return this.handlePromise(() => world.tryPlayerMove(dx, dy));
+    }
+  }
+
+  async playerTorpedo() {
+    const pos = await this.ui.selectTile('Choose a target for your torpedo.');
+    if (!pos) {
+      return;
+    }
+    const [x, y] = pos;
+    if (!world.isVisible(x, y)) {
+      this.ui.message('You see no target there.');
+      return;
+    }
+    const target = world.getMonster(x, y);
+    const player = world.player;
+    if (target === player) {
+      this.ui.message('You cowardly refuse to torpedo yourself');
+    } else if (!target) {
+      this.ui.message('There appears to be nobody there.');
+    } else {
+      const torpedo = new Monster(Monster.monsterTypes.torpedo);
+      torpedo.direction = player.direction;
+      torpedo.target = target;
+      torpedo.basicMove(player.x, player.y);
+      torpedo.sleep(0);
+      player.sleep(player.monsterType.baseDelay);
+      return this.redraw();
     }
   }
 

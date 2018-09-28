@@ -29,6 +29,8 @@ module.exports = [
     maxHp: 5,
     baseDelay: 2,
     hpRecovery: 0,
-    meleeVerb: 'blows up'
+    meleeVerb: 'explodes at',
+    isBlocking: false,
+    kamikaze: true
   }
 ];

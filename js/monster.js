@@ -23,6 +23,7 @@ function makeMonsterType(id, json) {
     hpRecovery: 1 / 24,
     maxDepth: Infinity,
     frequency: 0,
+    meleeVerb: 'attacks',
     alive: false,
     imageName: null,
     images: null
@@ -242,8 +243,9 @@ class Monster extends GameObject {
     this.sleep(this.monsterType.baseDelay);
     if (oldVisible || newVisible) {
       const time = world.ui.now();
+      const meleeVerb = this.monsterType.meleeVerb;
       world.ui.message(
-        `${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
+        `${toTitleCase(this.theName())} ${meleeVerb} ${victim.theName()}.`,
         this.isPlayer() ? goodColor : badColor,
         hp
       );

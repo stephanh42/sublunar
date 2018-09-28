@@ -913,6 +913,7 @@ function makeMonsterType(id, json) {
     hpRecovery: 1 / 24,
     maxDepth: Infinity,
     frequency: 0,
+    meleeVerb: 'attacks',
     alive: false,
     imageName: null,
     images: null
@@ -1132,8 +1133,9 @@ class Monster extends GameObject {
     this.sleep(this.monsterType.baseDelay);
     if (oldVisible || newVisible) {
       const time = world.ui.now();
+      const meleeVerb = this.monsterType.meleeVerb;
       world.ui.message(
-        `${toTitleCase(this.theName())} attacks ${victim.theName()}.`,
+        `${toTitleCase(this.theName())} ${meleeVerb} ${victim.theName()}.`,
         this.isPlayer() ? goodColor : badColor,
         hp
       );
@@ -1246,7 +1248,8 @@ module.exports = [
     name: 'submarine',
     maxHp: 20,
     maxDepth: 10,
-    hpRecovery: 1 / 12
+    hpRecovery: 1 / 12,
+    meleeVerb: 'rams'
   },
   {
     name: 'Selenian submarine',
@@ -1254,6 +1257,7 @@ module.exports = [
     maxHp: 15,
     maxDepth: 12,
     hpRecovery: 1 / 20,
+    meleeVerb: 'rams',
     frequency: 5
   },
   {

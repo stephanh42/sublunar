@@ -212,6 +212,15 @@ class Monster extends GameObject {
     }
   }
 
+  doTorpedo(target) {
+    const torpedo = new Monster(Monster.monsterTypes.torpedo);
+    torpedo.direction = this.direction;
+    torpedo.target = target;
+    torpedo.basicMove(this.x, this.y);
+    torpedo.sleep(0);
+    this.sleep(this.monsterType.baseDelay);
+  }
+
   async doDamage(hp, deadMessage) {
     const newHp = Math.max(0, this.getHp() - hp);
     this.baseHp = newHp;

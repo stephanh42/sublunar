@@ -217,9 +217,6 @@ class World {
 
   async tryPlayerMove(dx, dy) {
     const player = this.player;
-    if (!player) {
-      return;
-    }
     const xnew = dx + player.x;
     const ynew = dy + player.y;
     if (this.isPassable(xnew, ynew)) {

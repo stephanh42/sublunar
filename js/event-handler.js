@@ -82,6 +82,7 @@ class ViewerEventHandler extends BlockedEventHandler {
   }
 }
 
+/* Event handler which processes user commands. */
 class ActiveEventHandler extends ViewerEventHandler {
   getSelected() {
     const player = world.player;

@@ -55,7 +55,18 @@ class GameViewer extends CanvasViewer {
     return promise.error(err => this.handleError(err));
   }
 
+  /* This function handles a user action.
+   * - Checks the player is still alive.
+   * - Blocks input events.
+   * - Reports errors when the promise is rejected.
+   * - Saves the game.
+   * - Redraws the screen.
+   */
   async handlePromise(promiseFunc) {
+    if (!world.player || world.player.dead) {
+      return;
+    }
+    this.ui.clearMessageArea();
     this.eventHandlers.push(blockedEventHandler);
     try {
       await promiseFunc();
@@ -73,10 +84,7 @@ class GameViewer extends CanvasViewer {
   }
 
   playerMove(dx, dy) {
-    if (world.player && !world.player.dead) {
-      this.ui.clearMessageArea();
-      return this.handlePromise(() => world.tryPlayerMove(dx, dy));
-    }
+    return this.handlePromise(() => world.tryPlayerMove(dx, dy));
   }
 
   async playerTorpedo() {
@@ -96,12 +104,7 @@ class GameViewer extends CanvasViewer {
     } else if (!target) {
       this.ui.message('There appears to be nobody there.');
     } else {
-      const torpedo = new Monster(Monster.monsterTypes.torpedo);
-      torpedo.direction = player.direction;
-      torpedo.target = target;
-      torpedo.basicMove(player.x, player.y);
-      torpedo.sleep(0);
-      player.sleep(player.monsterType.baseDelay);
+      player.doTorpedo(target);
       return this.redraw();
     }
   }

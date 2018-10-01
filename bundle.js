@@ -274,7 +274,7 @@ class ActiveEventHandler extends ViewerEventHandler {
     } else if (evt.key === '-') {
       canvasViewer.tileSize = Math.max(32, canvasViewer.tileSize - 8);
       canvasViewer.redraw();
-    } else if (evt.key === 'T') {
+    } else if (evt.key === 't') {
       canvasViewer.handlePromise(() => canvasViewer.playerTorpedo());
     }
   }

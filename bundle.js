@@ -251,6 +251,7 @@ class ViewerEventHandler extends BlockedEventHandler {
   }
 }
 
+/* Event handler which processes user commands. */
 class ActiveEventHandler extends ViewerEventHandler {
   getSelected() {
     const player = world.player;
@@ -336,7 +337,7 @@ exports.blockedEventHandler = new BlockedEventHandler();
 exports.ActiveEventHandler = ActiveEventHandler;
 exports.SelectionEventHandler = SelectionEventHandler;
 
-},{"./world.js":24}],6:[function(require,module,exports){
+},{"./world.js":25}],6:[function(require,module,exports){
 'use strict';
 
 const world = require('./world.js');
@@ -458,217 +459,20 @@ registerClass(GameObject, 10);
 
 module.exports = GameObject;
 
-},{"./assert.js":2,"./indexutil.js":11,"./pickle.js":17,"./pqueue.js":18,"./world.js":24}],7:[function(require,module,exports){
+},{"./assert.js":2,"./indexutil.js":11,"./pickle.js":17,"./pqueue.js":18,"./world.js":25}],7:[function(require,module,exports){
 'use strict';
 
 const CanvasViewer = require('./canvasviewer.js');
+const UserInterface = require('./user-interface.js');
 const terrain = require('./terrain.js');
 const Monster = require('./monster.js');
 
 const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
-const {
-  makeElement,
-  makeSpan,
-  removeAllChildren,
-  goodColor,
-  badColor
-} = require('./htmlutil.js');
-const {
-  ActiveEventHandler,
-  blockedEventHandler,
-  SelectionEventHandler
-} = require('./event-handler.js');
-const {colorFromFraction} = require('./imgutil.js');
+const {badColor} = require('./htmlutil.js');
+const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
 const assert = require('./assert.js');
-
-class Message {
-  constructor(message, color, hp) {
-    this.message = message;
-    this.color = color;
-    this.repeat = 1;
-    this.hp = hp;
-  }
-
-  makeElement() {
-    const div = makeElement('div', 'message-span', this.message, this.color);
-    if (this.repeat > 1) {
-      const span2 = makeSpan(null, ` [${this.repeat}x]`, 'white');
-      div.appendChild(span2);
-    }
-    if (this.hp !== 0) {
-      const span2 = makeSpan(null, ` (${this.hp} HP)`, 'yellow');
-      div.appendChild(span2);
-    }
-    return div;
-  }
-
-  tryCombine(otherMessage) {
-    if (!otherMessage) {
-      return false;
-    }
-    if (
-      this.message === otherMessage.message &&
-      this.color === otherMessage.color
-    ) {
-      this.repeat += otherMessage.repeat;
-      this.hp += otherMessage.hp;
-      return true;
-    } else {
-      return false;
-    }
-  }
-}
-
-class StatusArea {
-  constructor(statusArea) {
-    this.statusArea = statusArea;
-    this.state = null;
-  }
-
-  static getState() {
-    const player = world.player;
-    if (player) {
-      return {
-        hp: player.getHp(),
-        maxHp: player.monsterType.maxHp,
-        dead: player.dead,
-        depth: player.y,
-        maxDepth: player.monsterType.maxDepth,
-        airPercentage: world.airPercentage()
-      };
-    } else {
-      return null;
-    }
-  }
-
-  static isStateEqual(state1, state2) {
-    if (state1 === state2) {
-      return true;
-    }
-    if (state1 === null || state2 === null) {
-      return false;
-    }
-    for (const [k, v] of Object.entries(state2)) {
-      if (state1[k] !== v) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  addDiv(...args) {
-    this.statusArea.appendChild(makeElement('div', 'status-span', ...args));
-  }
-
-  update() {
-    const state = StatusArea.getState();
-    if (StatusArea.isStateEqual(this.state, state)) {
-      return;
-    }
-    this.state = state;
-    const statusArea = this.statusArea;
-    removeAllChildren(statusArea);
-    if (state === null) {
-      return;
-    }
-    const hpColor = colorFromFraction(state.hp / state.maxHp);
-    this.addDiv(`HP: ${state.hp}/${state.maxHp}`, hpColor);
-    const depthColor = state.depth <= state.maxDepth ? goodColor : badColor;
-    this.addDiv(`Depth: ${state.depth}/${state.maxDepth}`, depthColor);
-    this.addDiv(
-      `Air: ${state.airPercentage}%`,
-      colorFromFraction(state.airPercentage / 100)
-    );
-    if (state.dead) {
-      this.addDiv('Dead', badColor);
-    }
-  }
-}
-
-class UserInterface {
-  constructor(gameViewer) {
-    const messageArea = document.getElementById('messageArea');
-    const statusArea = document.getElementById('statusArea');
-    const questionArea = document.getElementById('questionArea');
-
-    this.gameViewer = gameViewer;
-    this.messageArea = messageArea;
-    this.questionArea = questionArea;
-    this.statusArea = new StatusArea(statusArea);
-    this.lastMessage = null;
-    messageArea.addEventListener('click', () => this.clearMessageArea());
-    questionArea.addEventListener('click', () => this.clearQuestionArea());
-  }
-
-  redraw() {
-    return this.gameViewer.redraw();
-  }
-
-  async selectTile(message) {
-    const player = world.player;
-    if (!player || player.dead) {
-      return null;
-    }
-    const selectHandler = new SelectionEventHandler(
-      this.gameViewer,
-      player.x,
-      player.y,
-      message
-    );
-    this.gameViewer.eventHandlers.push(selectHandler);
-    let result = null;
-    try {
-      result = await selectHandler.resultPromise;
-    } finally {
-      this.gameViewer.eventHandlers.pop();
-      this.clearQuestionArea();
-      this.redraw();
-    }
-    return result;
-  }
-
-  async animate(animation) {
-    const gameViewer = this.gameViewer;
-    gameViewer.animation = animation;
-    const t = await gameViewer.animateUntil(animation.endTime());
-    gameViewer.animation = null;
-    return t;
-  }
-
-  now() {
-    return performance.now();
-  }
-
-  message(message, color = 'white', hp = 0) {
-    const msg = new Message(message, color, hp);
-    if (msg.tryCombine(this.lastMessage)) {
-      this.messageArea.removeChild(this.messageArea.lastChild);
-    }
-    this.messageArea.appendChild(msg.makeElement());
-    this.lastMessage = msg;
-  }
-
-  clearMessageArea() {
-    removeAllChildren(this.messageArea);
-    this.lastMessage = null;
-  }
-
-  questionAreaMessage(message, color = 'white') {
-    this.questionArea.appendChild(
-      makeElement('div', 'message-span', message, color)
-    );
-  }
-
-  clearQuestionArea() {
-    removeAllChildren(this.questionArea);
-  }
-
-  updateStatusArea() {
-    this.statusArea.update();
-  }
-}
 
 class GameViewer extends CanvasViewer {
   constructor() {
@@ -713,7 +517,18 @@ class GameViewer extends CanvasViewer {
     return promise.error(err => this.handleError(err));
   }
 
+  /* This function handles a user action.
+   * - Checks the player is still alive.
+   * - Blocks input events.
+   * - Reports errors when the promise is rejected.
+   * - Saves the game.
+   * - Redraws the screen.
+   */
   async handlePromise(promiseFunc) {
+    if (!world.player || world.player.dead) {
+      return;
+    }
+    this.ui.clearMessageArea();
     this.eventHandlers.push(blockedEventHandler);
     try {
       await promiseFunc();
@@ -731,10 +546,7 @@ class GameViewer extends CanvasViewer {
   }
 
   playerMove(dx, dy) {
-    if (world.player && !world.player.dead) {
-      this.ui.clearMessageArea();
-      return this.handlePromise(() => world.tryPlayerMove(dx, dy));
-    }
+    return this.handlePromise(() => world.tryPlayerMove(dx, dy));
   }
 
   async playerTorpedo() {
@@ -754,12 +566,7 @@ class GameViewer extends CanvasViewer {
     } else if (!target) {
       this.ui.message('There appears to be nobody there.');
     } else {
-      const torpedo = new Monster(Monster.monsterTypes.torpedo);
-      torpedo.direction = player.direction;
-      torpedo.target = target;
-      torpedo.basicMove(player.x, player.y);
-      torpedo.sleep(0);
-      player.sleep(player.monsterType.baseDelay);
+      player.doTorpedo(target);
       return this.redraw();
     }
   }
@@ -908,7 +715,7 @@ class GameViewer extends CanvasViewer {
 
 module.exports = GameViewer;
 
-},{"./assert.js":2,"./canvasviewer.js":3,"./database.js":4,"./event-handler.js":5,"./htmlutil.js":8,"./imgutil.js":9,"./monster.js":12,"./newgame.js":14,"./terrain.js":21,"./world.js":24}],8:[function(require,module,exports){
+},{"./assert.js":2,"./canvasviewer.js":3,"./database.js":4,"./event-handler.js":5,"./htmlutil.js":8,"./monster.js":12,"./newgame.js":14,"./terrain.js":21,"./user-interface.js":24,"./world.js":25}],8:[function(require,module,exports){
 'use strict';
 
 function makeElement(type, className, text, color) {
@@ -1277,6 +1084,15 @@ class Monster extends GameObject {
     }
   }
 
+  doTorpedo(target) {
+    const torpedo = new Monster(Monster.monsterTypes.torpedo);
+    torpedo.direction = this.direction;
+    torpedo.target = target;
+    torpedo.basicMove(this.x, this.y);
+    torpedo.sleep(0);
+    this.sleep(this.monsterType.baseDelay);
+  }
+
   async doDamage(hp, deadMessage) {
     const newHp = Math.max(0, this.getHp() - hp);
     this.baseHp = newHp;
@@ -1447,7 +1263,7 @@ registerClass(Monster, 20);
 
 module.exports = Monster;
 
-},{"./animation.js":1,"./assert.js":2,"./game-object.js":6,"./htmlutil.js":8,"./imgutil.js":9,"./monstertype.js":13,"./path-finder.js":15,"./pickle.js":17,"./randutil.js":19,"./terrain.js":21,"./textutil.js":23,"./world.js":24}],13:[function(require,module,exports){
+},{"./animation.js":1,"./assert.js":2,"./game-object.js":6,"./htmlutil.js":8,"./imgutil.js":9,"./monstertype.js":13,"./path-finder.js":15,"./pickle.js":17,"./randutil.js":19,"./terrain.js":21,"./textutil.js":23,"./world.js":25}],13:[function(require,module,exports){
 'use strict';
 
 module.exports = [
@@ -1532,7 +1348,7 @@ function newGame() {
 
 module.exports = newGame;
 
-},{"./monster.js":12,"./randutil.js":19,"./terrain.js":21,"./world.js":24}],15:[function(require,module,exports){
+},{"./monster.js":12,"./randutil.js":19,"./terrain.js":21,"./world.js":25}],15:[function(require,module,exports){
 'use strict';
 
 const pqueue = require('./pqueue.js');
@@ -2110,6 +1926,209 @@ exports.toTitleCase = toTitleCase;
 },{}],24:[function(require,module,exports){
 'use strict';
 
+const world = require('./world.js');
+const {SelectionEventHandler} = require('./event-handler.js');
+const {
+  removeAllChildren,
+  goodColor,
+  badColor,
+  makeSpan,
+  makeElement
+} = require('./htmlutil.js');
+const {colorFromFraction} = require('./imgutil.js');
+
+class Message {
+  constructor(message, color, hp) {
+    this.message = message;
+    this.color = color;
+    this.repeat = 1;
+    this.hp = hp;
+  }
+
+  makeElement() {
+    const div = makeElement('div', 'message-span', this.message, this.color);
+    if (this.repeat > 1) {
+      const span2 = makeSpan(null, ` [${this.repeat}x]`, 'white');
+      div.appendChild(span2);
+    }
+    if (this.hp !== 0) {
+      const span2 = makeSpan(null, ` (${this.hp} HP)`, 'yellow');
+      div.appendChild(span2);
+    }
+    return div;
+  }
+
+  tryCombine(otherMessage) {
+    if (!otherMessage) {
+      return false;
+    }
+    if (
+      this.message === otherMessage.message &&
+      this.color === otherMessage.color
+    ) {
+      this.repeat += otherMessage.repeat;
+      this.hp += otherMessage.hp;
+      return true;
+    } else {
+      return false;
+    }
+  }
+}
+
+class StatusArea {
+  constructor(statusArea) {
+    this.statusArea = statusArea;
+    this.state = null;
+  }
+
+  static getState() {
+    const player = world.player;
+    if (player) {
+      return {
+        hp: player.getHp(),
+        maxHp: player.monsterType.maxHp,
+        dead: player.dead,
+        depth: player.y,
+        maxDepth: player.monsterType.maxDepth,
+        airPercentage: world.airPercentage()
+      };
+    } else {
+      return null;
+    }
+  }
+
+  static isStateEqual(state1, state2) {
+    if (state1 === state2) {
+      return true;
+    }
+    if (state1 === null || state2 === null) {
+      return false;
+    }
+    for (const [k, v] of Object.entries(state2)) {
+      if (state1[k] !== v) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  addDiv(...args) {
+    this.statusArea.appendChild(makeElement('div', 'status-span', ...args));
+  }
+
+  update() {
+    const state = StatusArea.getState();
+    if (StatusArea.isStateEqual(this.state, state)) {
+      return;
+    }
+    this.state = state;
+    const statusArea = this.statusArea;
+    removeAllChildren(statusArea);
+    if (state === null) {
+      return;
+    }
+    const hpColor = colorFromFraction(state.hp / state.maxHp);
+    this.addDiv(`HP: ${state.hp}/${state.maxHp}`, hpColor);
+    const depthColor = state.depth <= state.maxDepth ? goodColor : badColor;
+    this.addDiv(`Depth: ${state.depth}/${state.maxDepth}`, depthColor);
+    this.addDiv(
+      `Air: ${state.airPercentage}%`,
+      colorFromFraction(state.airPercentage / 100)
+    );
+    if (state.dead) {
+      this.addDiv('Dead', badColor);
+    }
+  }
+}
+
+class UserInterface {
+  constructor(gameViewer) {
+    const messageArea = document.getElementById('messageArea');
+    const statusArea = document.getElementById('statusArea');
+    const questionArea = document.getElementById('questionArea');
+
+    this.gameViewer = gameViewer;
+    this.messageArea = messageArea;
+    this.questionArea = questionArea;
+    this.statusArea = new StatusArea(statusArea);
+    this.lastMessage = null;
+    messageArea.addEventListener('click', () => this.clearMessageArea());
+    questionArea.addEventListener('click', () => this.clearQuestionArea());
+  }
+
+  redraw() {
+    return this.gameViewer.redraw();
+  }
+
+  async selectTile(message) {
+    const player = world.player;
+    if (!player || player.dead) {
+      return null;
+    }
+    const selectHandler = new SelectionEventHandler(
+      this.gameViewer,
+      player.x,
+      player.y,
+      message
+    );
+    this.gameViewer.eventHandlers.push(selectHandler);
+    let result = null;
+    try {
+      result = await selectHandler.resultPromise;
+    } finally {
+      this.gameViewer.eventHandlers.pop();
+      this.clearQuestionArea();
+      this.redraw();
+    }
+    return result;
+  }
+
+  async animate(animation) {
+    const gameViewer = this.gameViewer;
+    gameViewer.animation = animation;
+    const t = await gameViewer.animateUntil(animation.endTime());
+    gameViewer.animation = null;
+    return t;
+  }
+
+  now() {
+    return performance.now();
+  }
+
+  message(message, color = 'white', hp = 0) {
+    const msg = new Message(message, color, hp);
+    if (msg.tryCombine(this.lastMessage)) {
+      this.messageArea.removeChild(this.messageArea.lastChild);
+    }
+    this.messageArea.appendChild(msg.makeElement());
+    this.lastMessage = msg;
+  }
+
+  clearMessageArea() {
+    removeAllChildren(this.messageArea);
+    this.lastMessage = null;
+  }
+
+  questionAreaMessage(message, color = 'white') {
+    this.questionArea.appendChild(
+      makeElement('div', 'message-span', message, color)
+    );
+  }
+
+  clearQuestionArea() {
+    removeAllChildren(this.questionArea);
+  }
+
+  updateStatusArea() {
+    this.statusArea.update();
+  }
+}
+
+module.exports = UserInterface;
+
+},{"./event-handler.js":5,"./htmlutil.js":8,"./imgutil.js":9,"./world.js":25}],25:[function(require,module,exports){
+'use strict';
+
 const permissiveFov = require('./permissive-fov.js');
 const fovTree = permissiveFov.fovTree.children();
 const pqueue = require('./pqueue.js');
@@ -2327,9 +2346,6 @@ class World {
 
   async tryPlayerMove(dx, dy) {
     const player = this.player;
-    if (!player) {
-      return;
-    }
     const xnew = dx + player.x;
     const ynew = dy + player.y;
     if (this.isPassable(xnew, ynew)) {

@@ -171,13 +171,18 @@ class World {
     return undefined;
   }
 
-  isPassable(x, y) {
+  /* Can somebody pass at (x,y).
+   * isBlocking is the blocking status of the monster trying to pass.
+   */
+  isPassable(x, y, isBlocking = true) {
     if (!this.getTerrain(x, y).passable) {
       return false;
     }
-    for (const gameObject of this.getGameObjects(x, y)) {
-      if (gameObject.isBlocking()) {
-        return false;
+    if (isBlocking) {
+      for (const gameObject of this.getGameObjects(x, y)) {
+        if (gameObject.isBlocking()) {
+          return false;
+        }
       }
     }
     return true;

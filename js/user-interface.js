@@ -158,11 +158,13 @@ class UserInterface {
   }
 
   async animate(animation) {
+    if (animation.isTrivial()) {
+      return;
+    }
     const gameViewer = this.gameViewer;
     gameViewer.animation = animation;
-    const t = await gameViewer.animateUntil(animation.endTime());
+    await gameViewer.animateUntil(animation.endTime());
     gameViewer.animation = null;
-    return t;
   }
 
   now() {

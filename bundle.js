@@ -16,6 +16,12 @@ class State {
     this.opacity = opacity;
   }
 
+  equals(other) {
+    return (
+      this.x === other.x && this.y === other.y && this.opacity === other.opacity
+    );
+  }
+
   interpolate(otherState, time, sfunc) {
     let s = (time - this.time) / (otherState.time - this.time);
     s = sfunc(Math.max(0, Math.min(1, s)));
@@ -40,6 +46,10 @@ class ObjectAnimation {
     this.endState = endState;
     this.sfunc = sfunc;
     this.animatePlayer = animatePlayer;
+  }
+
+  isTrivial() {
+    return this.beginState.equals(this.endState);
   }
 
   getState(time) {
@@ -875,7 +885,7 @@ exports.getYFromId = xy => (xy << 16) >> 16;
 const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
 const {registerClass, getReference} = require('./pickle.js');
-const {randomInt, randomRange} = require('./randutil.js');
+const {randomInt, randomRange, probability} = require('./randutil.js');
 const GameObject = require('./game-object.js');
 const world = require('./world.js');
 const animation = require('./animation.js');
@@ -899,6 +909,7 @@ function makeMonsterType(id, json) {
     alive: false,
     isBlocking: true,
     kamikaze: false,
+    torpedoRate: 0,
     imageName: null,
     images: null
   };
@@ -1023,6 +1034,10 @@ class Monster extends GameObject {
     }
   }
 
+  titleCaseName() {
+    return toTitleCase(this.theName());
+  }
+
   draw(ctx, x, y, tileSize) {
     const img = this.monsterType.images.get(tileSize);
     drawImageDirection(ctx, img, x, y, this.direction);
@@ -1086,14 +1101,18 @@ class Monster extends GameObject {
 
   doTorpedo(target) {
     const torpedo = new Monster(Monster.monsterTypes.torpedo);
+    this.setDirection(target.x - this.x);
     torpedo.direction = this.direction;
     torpedo.target = target;
     torpedo.basicMove(this.x, this.y);
     torpedo.sleep(0);
     this.sleep(this.monsterType.baseDelay);
+    if (!this.isPlayer() && world.isVisible(this.x, this.y)) {
+      world.ui.message(`${this.titleCaseName()} launches a torpedo.`);
+    }
   }
 
-  async doDamage(hp, deadMessage) {
+  async doDamage(hp, deadMessage, silentDead = false) {
     const newHp = Math.max(0, this.getHp() - hp);
     this.baseHp = newHp;
     this.baseHpTime = world.time;
@@ -1116,8 +1135,10 @@ class Monster extends GameObject {
               new animation.State(time + 100, this.x, this.y, 0)
             )
           );
-          const verb = this.monsterType.alive ? 'dies' : 'is destroyed';
-          world.ui.message(`${toTitleCase(this.theName())} ${verb}.`);
+          if (!silentDead) {
+            const verb = this.monsterType.alive ? 'dies' : 'is destroyed';
+            world.ui.message(`${this.titleCaseName()} ${verb}.`);
+          }
         }
         this.basicUnplace();
       }
@@ -1136,7 +1157,7 @@ class Monster extends GameObject {
       const time = world.ui.now();
       const meleeVerb = this.monsterType.meleeVerb;
       world.ui.message(
-        `${toTitleCase(this.theName())} ${meleeVerb} ${victim.theName()}.`,
+        `${this.titleCaseName()} ${meleeVerb} ${victim.theName()}.`,
         this.isPlayer() ? goodColor : badColor,
         hp
       );
@@ -1164,7 +1185,7 @@ class Monster extends GameObject {
 
   isPassable(x, y) {
     return (
-      world.isPassable(x, y) &&
+      world.isPassable(x, y, this.isBlocking()) &&
       (this.isPlayer() || y <= this.monsterType.maxDepth)
     );
   }
@@ -1181,11 +1202,29 @@ class Monster extends GameObject {
     }
   }
 
+  canSee(otherMonster) {
+    if (this.isPlayer()) {
+      return world.isVisible(otherMonster.x, otherMonster.y);
+    } else if (otherMonster.isPlayer()) {
+      return world.isVisible(this.x, this.y);
+    } else {
+      assert(
+        false,
+        'Not implemented: visual check between two non-player monsters'
+      );
+      return false;
+    }
+  }
+
   async wakeUp() {
     this.waiting = false;
     if (!this.isPlayer()) {
       const target = this.getTarget();
       if (target) {
+        if (probability(this.monsterType.torpedoRate) && this.canSee(target)) {
+          this.doTorpedo(target);
+          return;
+        }
         const pf = new MonsterPathFinder(
           this.x,
           this.y,
@@ -1195,12 +1234,12 @@ class Monster extends GameObject {
         );
         pf.runN(this.monsterType.intelligence);
         const path = pf.getPath();
-        if (path.length >= 2) {
-          const [x2, y2] = path[1];
-          if (this.isPassable(x2, y2)) {
-            return this.doMove(x2 - this.x, y2 - this.y);
-          } else if (world.getGameObjects(x2, y2).includes(target)) {
+        if (path.length >= 1) {
+          const [x2, y2] = path[Math.min(1, path.length - 1)];
+          if (world.getGameObjects(x2, y2).includes(target)) {
             return this.doAttack(target);
+          } else if (this.isPassable(x2, y2)) {
+            return this.doMove(x2 - this.x, y2 - this.y);
           }
         }
       } else if (this.monsterType.kamikaze) {
@@ -1212,7 +1251,8 @@ class Monster extends GameObject {
   blowUp() {
     return this.doDamage(
       Infinity,
-      `${toTitleCase(this.theName())} blows itself up.`
+      `${this.titleCaseName()} blows itself up.`,
+      true /* silentDead */
     );
   }
 
@@ -1281,6 +1321,7 @@ module.exports = [
     maxDepth: 12,
     hpRecovery: 1 / 20,
     meleeVerb: 'rams',
+    torpedoRate: 0.1,
     frequency: 5
   },
   {
@@ -1756,9 +1797,14 @@ function randomRange(lo, hi) {
   return lo + randomInt(nhalf + 1) + randomInt(n - nhalf + 1);
 }
 
+function probability(prob) {
+  return Math.random() < prob;
+}
+
 exports.randomInt = randomInt;
 exports.randomStep = randomStep;
 exports.randomRange = randomRange;
+exports.probability = probability;
 
 },{}],20:[function(require,module,exports){
 'use strict';
@@ -2084,11 +2130,13 @@ class UserInterface {
   }
 
   async animate(animation) {
+    if (animation.isTrivial()) {
+      return;
+    }
     const gameViewer = this.gameViewer;
     gameViewer.animation = animation;
-    const t = await gameViewer.animateUntil(animation.endTime());
+    await gameViewer.animateUntil(animation.endTime());
     gameViewer.animation = null;
-    return t;
   }
 
   now() {
@@ -2300,13 +2348,18 @@ class World {
     return undefined;
   }
 
-  isPassable(x, y) {
+  /* Can somebody pass at (x,y).
+   * isBlocking is the blocking status of the monster trying to pass.
+   */
+  isPassable(x, y, isBlocking = true) {
     if (!this.getTerrain(x, y).passable) {
       return false;
     }
-    for (const gameObject of this.getGameObjects(x, y)) {
-      if (gameObject.isBlocking()) {
-        return false;
+    if (isBlocking) {
+      for (const gameObject of this.getGameObjects(x, y)) {
+        if (gameObject.isBlocking()) {
+          return false;
+        }
       }
     }
     return true;

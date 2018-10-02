@@ -15,6 +15,7 @@ module.exports = [
     maxDepth: 12,
     hpRecovery: 1 / 20,
     meleeVerb: 'rams',
+    torpedoRate: 0.1,
     frequency: 5
   },
   {

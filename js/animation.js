@@ -15,6 +15,12 @@ class State {
     this.opacity = opacity;
   }
 
+  equals(other) {
+    return (
+      this.x === other.x && this.y === other.y && this.opacity === other.opacity
+    );
+  }
+
   interpolate(otherState, time, sfunc) {
     let s = (time - this.time) / (otherState.time - this.time);
     s = sfunc(Math.max(0, Math.min(1, s)));
@@ -39,6 +45,10 @@ class ObjectAnimation {
     this.endState = endState;
     this.sfunc = sfunc;
     this.animatePlayer = animatePlayer;
+  }
+
+  isTrivial() {
+    return this.beginState.equals(this.endState);
   }
 
   getState(time) {

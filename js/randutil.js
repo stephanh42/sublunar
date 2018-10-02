@@ -28,6 +28,11 @@ function randomRange(lo, hi) {
   return lo + randomInt(nhalf + 1) + randomInt(n - nhalf + 1);
 }
 
+function probability(prob) {
+  return Math.random() < prob;
+}
+
 exports.randomInt = randomInt;
 exports.randomStep = randomStep;
 exports.randomRange = randomRange;
+exports.probability = probability;

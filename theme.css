@@ -1,0 +1,48 @@
+html, body, .parent {
+  width: 100%;
+  height: 100%;
+  margin: 0px;
+  border: 0;
+  overflow: hidden; /*  Disable scrollbars */
+  display: block;  /* No floating content on sides */
+  position: relative;
+}
+canvas {
+  width: 100%;
+  height: 100%;
+  margin: 0px;
+  border: 0;
+  background-color: black;
+  position: absolute;
+}
+.message-area, .status-area {
+  position: absolute;
+  margin: 4px;
+  border: 0;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+.message-area {
+  display: flex;              /* establish flex container */
+  flex-direction: column;     /* stack flex items vertically */
+  justify-content: center;    /* center items vertically, in this case */
+  align-items: center;        /* center items horizontally, in this case */
+  width: 100%;
+  top: 25%;
+}
+.status-area {
+  width: 100%;
+  bottom: 0;
+}
+.message-span {
+  margin-left: 4px;
+  margin-right: 4px;
+  font-size: x-large;
+  text-align: center;
+}
+.status-span {
+  margin-left: 20px;
+  margin-right: 20px;
+  font-size: large;
+  display: inline-block;
+}   

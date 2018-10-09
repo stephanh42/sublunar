@@ -64,7 +64,8 @@ class StatusArea {
         dead: player.dead,
         depth: player.y,
         maxDepth: player.monsterType.maxDepth,
-        airPercentage: world.airPercentage()
+        airPercentage: world.airPercentage(),
+        money: world.money
       };
     } else {
       return null;
@@ -109,6 +110,7 @@ class StatusArea {
       `Air: ${state.airPercentage}%`,
       colorFromFraction(state.airPercentage / 100)
     );
+    this.addDiv(`Money: ${state.money}`);
     if (state.dead) {
       this.addDiv('Dead', badColor);
     }

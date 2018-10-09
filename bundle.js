@@ -2036,7 +2036,8 @@ class StatusArea {
         dead: player.dead,
         depth: player.y,
         maxDepth: player.monsterType.maxDepth,
-        airPercentage: world.airPercentage()
+        airPercentage: world.airPercentage(),
+        money: world.money
       };
     } else {
       return null;
@@ -2081,6 +2082,7 @@ class StatusArea {
       `Air: ${state.airPercentage}%`,
       colorFromFraction(state.airPercentage / 100)
     );
+    this.addDiv(`Money: ${state.money}`);
     if (state.dead) {
       this.addDiv('Dead', badColor);
     }
@@ -2204,7 +2206,7 @@ function unpickleWithLocation(x, y, obj) {
   return obj;
 }
 
-const gameVersion = 7;
+const gameVersion = 8;
 
 class World {
   constructor() {
@@ -2221,6 +2223,7 @@ class World {
     this.database = null;
     this.lastAirTime = 0;
     this.airDuration = 0;
+    this.money = 0;
   }
 
   reset() {
@@ -2235,6 +2238,7 @@ class World {
     this.player = null;
     this.lastAirTime = 0;
     this.airDuration = 600;
+    this.money = 0;
   }
 
   getTerrain(x, y) {
@@ -2451,7 +2455,8 @@ class World {
       schedule: this.schedule.map(pickleAction),
       player: getReference(this.player),
       lastAirTime: this.lastAirTime,
-      airDuration: this.airDuration
+      airDuration: this.airDuration,
+      money: this.money
     };
   }
 
@@ -2463,6 +2468,7 @@ class World {
     this.player = this.resolveReference(json.player);
     this.lastAirTime = json.lastAirTime;
     this.airDuration = json.airDuration;
+    this.money = json.money;
     for (const [, ar] of this.gameObjects) {
       for (const gameObject of ar) {
         gameObject.postLoad(this);

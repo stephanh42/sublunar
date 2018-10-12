@@ -28,7 +28,7 @@ module.exports = [
   {
     name: 'torpedo',
     maxHp: 5,
-    baseDelay: 2,
+    baseDelay: 4,
     hpRecovery: 0,
     meleeVerb: 'explodes at',
     isBlocking: false,

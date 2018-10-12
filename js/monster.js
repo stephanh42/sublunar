@@ -73,6 +73,7 @@ class Monster extends GameObject {
     this.baseHpTime = 0;
     this.direction = randomInt(2) === 0;
     this.target = null;
+    this.movesLeft = Infinity;
   }
 
   static chooseMonsterType(filter = () => true) {
@@ -118,16 +119,23 @@ class Monster extends GameObject {
     json.mt = this.monsterType.id;
     json.hp = this.baseHp;
     json.hpTime = this.baseHpTime;
-    json.target = getReference(this.target);
+    const target = getReference(this.target);
+    if (target) {
+      json.target = target;
+    }
+    if (this.movesLeft !== Infinity) {
+      json.movesLeft = this.movesLeft;
+    }
     return json;
   }
 
   unpickleData(json) {
     super.unpickleData(json);
     this.monsterType = monsterList[json.mt];
-    this.baseHp = json.hp;
-    this.baseHpTime = json.hpTime;
-    this.target = json.target;
+    ({hp: this.baseHp,
+      hpTime: this.baseHpTime,
+      target: this.target = null,
+      movesLeft: this.movesLeft = Infinity} = json);
   }
 
   postLoad(world) {
@@ -215,6 +223,10 @@ class Monster extends GameObject {
         )
       );
     }
+    this.movesLeft = this.movesLeft - 1;
+    if (this.movesLeft === 0) {
+      return this.blowUp();
+    }
   }
 
   doTorpedo(target) {
@@ -224,6 +236,11 @@ class Monster extends GameObject {
     torpedo.target = target;
     torpedo.basicMove(this.x, this.y);
     torpedo.sleep(0);
+    const distance = Math.max(
+      Math.abs(target.x - this.x),
+      Math.abs(target.y - this.y)
+    );
+    torpedo.movesLeft = distance + randomRange(1, Math.max(4, distance * 2));
     this.sleep(this.monsterType.baseDelay);
     if (!this.isPlayer() && world.isVisible(this.x, this.y)) {
       world.ui.message(`${this.titleCaseName()} launches a torpedo.`);

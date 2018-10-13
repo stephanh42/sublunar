@@ -347,7 +347,7 @@ exports.blockedEventHandler = new BlockedEventHandler();
 exports.ActiveEventHandler = ActiveEventHandler;
 exports.SelectionEventHandler = SelectionEventHandler;
 
-},{"./world.js":25}],6:[function(require,module,exports){
+},{"./world.js":26}],6:[function(require,module,exports){
 'use strict';
 
 const world = require('./world.js');
@@ -355,6 +355,28 @@ const pqueue = require('./pqueue.js');
 const {getIdFromXY} = require('./indexutil.js');
 const {registerClass} = require('./pickle.js');
 const assert = require('./assert.js');
+const {loadImageSizes} = require('./imgutil.js');
+const {awaitPromises} = require('./terrain.js');
+
+const objectTypes = {};
+const objectTypeList = [];
+
+function makeObjectType(id, json) {
+  const result = {
+    id: id,
+    imageName: null,
+    images: null
+  };
+  Object.assign(result, json);
+  result.imageName = result.imageName || result.name;
+  return result;
+}
+
+for (const json of require('./objecttype.js')) {
+  const objectObj = makeObjectType(objectTypeList.length, json);
+  objectTypeList.push(objectObj);
+  objectTypes[objectObj.name] = objectObj;
+}
 
 class GameObject {
   constructor() {
@@ -463,19 +485,71 @@ class GameObject {
   isBlocking() {
     return false;
   }
+
+  static loadImages() {
+    const promises = [];
+    for (const obj of objectTypeList) {
+      if (obj.imageName) {
+        promises.push(
+          loadImageSizes('img/' + obj.imageName).then(imgs => {
+            obj.images = imgs;
+          })
+        );
+      }
+    }
+    return awaitPromises(promises);
+  }
+
+  pickleData() {
+    const json = super.pickleData();
+    json.ot = this.objectType.id;
+  }
+
+  unpickleData(json) {
+    super.unpickleData(json);
+    this.objectType = objectTypeList[json.ot];
+  }
+}
+
+class TypedGameObject extends GameObject {
+  constructor(objectType) {
+    super();
+    this.objectType = objectType;
+  }
+}
+
+class MoneyBag extends TypedGameObject {
+  constructor(money = 0) {
+    super(objectTypes['money bag']);
+    this.money = money;
+  }
+
+  pickleData() {
+    const json = super.pickleData();
+    json.money = this.money;
+    return json;
+  }
+
+  unpickleData(json) {
+    super.unpickleData(json);
+    this.money = json.money;
+  }
 }
 
 registerClass(GameObject, 10);
+registerClass(MoneyBag, 30);
 
-module.exports = GameObject;
+exports.GameObject = GameObject;
+exports.MoneyBag = MoneyBag;
 
-},{"./assert.js":2,"./indexutil.js":11,"./pickle.js":17,"./pqueue.js":18,"./world.js":25}],7:[function(require,module,exports){
+},{"./assert.js":2,"./imgutil.js":9,"./indexutil.js":11,"./objecttype.js":15,"./pickle.js":18,"./pqueue.js":19,"./terrain.js":22,"./world.js":26}],7:[function(require,module,exports){
 'use strict';
 
 const CanvasViewer = require('./canvasviewer.js');
 const UserInterface = require('./user-interface.js');
 const terrain = require('./terrain.js');
 const Monster = require('./monster.js');
+const {GameObject} = require('./game-object.js');
 
 const database = require('./database.js');
 const world = require('./world.js');
@@ -585,6 +659,7 @@ class GameViewer extends CanvasViewer {
     const dbPromise = database.openDatabase();
     const p1 = terrain.loadImages();
     const p2 = Monster.loadImages();
+    const p3 = GameObject.loadImages();
     world.database = await dbPromise;
     let msg;
     if (await world.tryLoadGame()) {
@@ -596,6 +671,7 @@ class GameViewer extends CanvasViewer {
     }
     await p1;
     await p2;
+    await p3;
     this.ui.updateStatusArea();
     this.ui.clearMessageArea();
     this.ui.message(msg, 'yellow');
@@ -725,7 +801,7 @@ class GameViewer extends CanvasViewer {
 
 module.exports = GameViewer;
 
-},{"./assert.js":2,"./canvasviewer.js":3,"./database.js":4,"./event-handler.js":5,"./htmlutil.js":8,"./monster.js":12,"./newgame.js":14,"./terrain.js":21,"./user-interface.js":24,"./world.js":25}],8:[function(require,module,exports){
+},{"./assert.js":2,"./canvasviewer.js":3,"./database.js":4,"./event-handler.js":5,"./game-object.js":6,"./htmlutil.js":8,"./monster.js":12,"./newgame.js":14,"./terrain.js":22,"./user-interface.js":25,"./world.js":26}],8:[function(require,module,exports){
 'use strict';
 
 function makeElement(type, className, text, color) {
@@ -886,7 +962,7 @@ const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
 const {registerClass, getReference} = require('./pickle.js');
 const {randomInt, randomRange, probability} = require('./randutil.js');
-const GameObject = require('./game-object.js');
+const {GameObject} = require('./game-object.js');
 const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
@@ -955,6 +1031,7 @@ class Monster extends GameObject {
     this.baseHpTime = 0;
     this.direction = randomInt(2) === 0;
     this.target = null;
+    this.movesLeft = Infinity;
   }
 
   static chooseMonsterType(filter = () => true) {
@@ -1000,16 +1077,25 @@ class Monster extends GameObject {
     json.mt = this.monsterType.id;
     json.hp = this.baseHp;
     json.hpTime = this.baseHpTime;
-    json.target = getReference(this.target);
+    const target = getReference(this.target);
+    if (target) {
+      json.target = target;
+    }
+    if (this.movesLeft !== Infinity) {
+      json.movesLeft = this.movesLeft;
+    }
     return json;
   }
 
   unpickleData(json) {
     super.unpickleData(json);
     this.monsterType = monsterList[json.mt];
-    this.baseHp = json.hp;
-    this.baseHpTime = json.hpTime;
-    this.target = json.target;
+    ({
+      hp: this.baseHp,
+      hpTime: this.baseHpTime,
+      target: this.target = null,
+      movesLeft: this.movesLeft = Infinity
+    } = json);
   }
 
   postLoad(world) {
@@ -1097,6 +1183,10 @@ class Monster extends GameObject {
         )
       );
     }
+    this.movesLeft = this.movesLeft - 1;
+    if (this.movesLeft === 0) {
+      return this.blowUp();
+    }
   }
 
   doTorpedo(target) {
@@ -1106,6 +1196,11 @@ class Monster extends GameObject {
     torpedo.target = target;
     torpedo.basicMove(this.x, this.y);
     torpedo.sleep(0);
+    const distance = Math.max(
+      Math.abs(target.x - this.x),
+      Math.abs(target.y - this.y)
+    );
+    torpedo.movesLeft = distance + randomRange(1, Math.max(4, distance * 2));
     this.sleep(this.monsterType.baseDelay);
     if (!this.isPlayer() && world.isVisible(this.x, this.y)) {
       world.ui.message(`${this.titleCaseName()} launches a torpedo.`);
@@ -1303,7 +1398,7 @@ registerClass(Monster, 20);
 
 module.exports = Monster;
 
-},{"./animation.js":1,"./assert.js":2,"./game-object.js":6,"./htmlutil.js":8,"./imgutil.js":9,"./monstertype.js":13,"./path-finder.js":15,"./pickle.js":17,"./randutil.js":19,"./terrain.js":21,"./textutil.js":23,"./world.js":25}],13:[function(require,module,exports){
+},{"./animation.js":1,"./assert.js":2,"./game-object.js":6,"./htmlutil.js":8,"./imgutil.js":9,"./monstertype.js":13,"./path-finder.js":16,"./pickle.js":18,"./randutil.js":20,"./terrain.js":22,"./textutil.js":24,"./world.js":26}],13:[function(require,module,exports){
 'use strict';
 
 module.exports = [
@@ -1334,7 +1429,7 @@ module.exports = [
   {
     name: 'torpedo',
     maxHp: 5,
-    baseDelay: 2,
+    baseDelay: 4,
     hpRecovery: 0,
     meleeVerb: 'explodes at',
     isBlocking: false,
@@ -1389,7 +1484,17 @@ function newGame() {
 
 module.exports = newGame;
 
-},{"./monster.js":12,"./randutil.js":19,"./terrain.js":21,"./world.js":25}],15:[function(require,module,exports){
+},{"./monster.js":12,"./randutil.js":20,"./terrain.js":22,"./world.js":26}],15:[function(require,module,exports){
+'use strict';
+
+module.exports = [
+  {
+    name: 'money bag',
+    imageName: 'moneybag'
+  }
+];
+
+},{}],16:[function(require,module,exports){
 'use strict';
 
 const pqueue = require('./pqueue.js');
@@ -1510,7 +1615,7 @@ class PathFinder {
 
 module.exports = PathFinder;
 
-},{"./indexutil.js":11,"./pqueue.js":18}],16:[function(require,module,exports){
+},{"./indexutil.js":11,"./pqueue.js":19}],17:[function(require,module,exports){
 'use strict';
 
 function zeroCrossing(x1, y1, x2, y2) {
@@ -1637,7 +1742,7 @@ const fovTree = new FovTree(0, 0, initialBeam);
 
 exports.fovTree = fovTree;
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 
 const assert = require('./assert.js');
@@ -1679,7 +1784,7 @@ exports.pickle = pickle;
 exports.unpickle = unpickle;
 exports.getReference = getReference;
 
-},{"./assert.js":2}],18:[function(require,module,exports){
+},{"./assert.js":2}],19:[function(require,module,exports){
 'use strict';
 
 function swap(pq, i, j) {
@@ -1766,7 +1871,7 @@ exports.insert = insert;
 exports.remove = remove;
 exports.test = test;
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 function randomInt(n) {
@@ -1806,7 +1911,7 @@ exports.randomStep = randomStep;
 exports.randomRange = randomRange;
 exports.probability = probability;
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 
 const {getIdFromXY} = require('./indexutil.js');
@@ -1872,7 +1977,7 @@ class TerrainGrid {
 
 module.exports = TerrainGrid;
 
-},{"./indexutil.js":11,"./terrain.js":21}],21:[function(require,module,exports){
+},{"./indexutil.js":11,"./terrain.js":22}],22:[function(require,module,exports){
 'use strict';
 
 const {loadImageSizes} = require('./imgutil.js');
@@ -1922,7 +2027,7 @@ exports.terrainList = terrainList;
 exports.loadImages = loadImages;
 exports.awaitPromises = awaitPromises;
 
-},{"./imgutil.js":9,"./terraintype.js":22}],22:[function(require,module,exports){
+},{"./imgutil.js":9,"./terraintype.js":23}],23:[function(require,module,exports){
 'use strict';
 
 module.exports = [
@@ -1956,7 +2061,7 @@ module.exports = [
   }
 ];
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 
 function toTitleCase(str) {
@@ -1969,7 +2074,7 @@ function toTitleCase(str) {
 
 exports.toTitleCase = toTitleCase;
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict';
 
 const world = require('./world.js');
@@ -2176,7 +2281,7 @@ class UserInterface {
 
 module.exports = UserInterface;
 
-},{"./event-handler.js":5,"./htmlutil.js":8,"./imgutil.js":9,"./world.js":25}],25:[function(require,module,exports){
+},{"./event-handler.js":5,"./htmlutil.js":8,"./imgutil.js":9,"./world.js":26}],26:[function(require,module,exports){
 'use strict';
 
 const permissiveFov = require('./permissive-fov.js');
@@ -2571,4 +2676,4 @@ class World {
 
 module.exports = new World();
 
-},{"./assert.js":2,"./database.js":4,"./htmlutil.js":8,"./indexutil.js":11,"./permissive-fov.js":16,"./pickle.js":17,"./pqueue.js":18,"./terrain-grid.js":20,"./terrain.js":21}]},{},[10]);
+},{"./assert.js":2,"./database.js":4,"./htmlutil.js":8,"./indexutil.js":11,"./permissive-fov.js":17,"./pickle.js":18,"./pqueue.js":19,"./terrain-grid.js":21,"./terrain.js":22}]},{},[10]);

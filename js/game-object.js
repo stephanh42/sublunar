@@ -5,6 +5,28 @@ const pqueue = require('./pqueue.js');
 const {getIdFromXY} = require('./indexutil.js');
 const {registerClass} = require('./pickle.js');
 const assert = require('./assert.js');
+const {loadImageSizes} = require('./imgutil.js');
+const {awaitPromises} = require('./terrain.js');
+
+const objectTypes = {};
+const objectTypeList = [];
+
+function makeObjectType(id, json) {
+  const result = {
+    id: id,
+    imageName: null,
+    images: null
+  };
+  Object.assign(result, json);
+  result.imageName = result.imageName || result.name;
+  return result;
+}
+
+for (const json of require('./objecttype.js')) {
+  const objectObj = makeObjectType(objectTypeList.length, json);
+  objectTypeList.push(objectObj);
+  objectTypes[objectObj.name] = objectObj;
+}
 
 class GameObject {
   constructor() {
@@ -113,8 +135,59 @@ class GameObject {
   isBlocking() {
     return false;
   }
+
+  static loadImages() {
+    const promises = [];
+    for (const obj of objectTypeList) {
+      if (obj.imageName) {
+        promises.push(
+          loadImageSizes('img/' + obj.imageName).then(imgs => {
+            obj.images = imgs;
+          })
+        );
+      }
+    }
+    return awaitPromises(promises);
+  }
+
+  pickleData() {
+    const json = super.pickleData();
+    json.ot = this.objectType.id;
+  }
+
+  unpickleData(json) {
+    super.unpickleData(json);
+    this.objectType = objectTypeList[json.ot];
+  }
+}
+
+class TypedGameObject extends GameObject {
+  constructor(objectType) {
+    super();
+    this.objectType = objectType;
+  }
+}
+
+class MoneyBag extends TypedGameObject {
+  constructor(money = 0) {
+    super(objectTypes['money bag']);
+    this.money = money;
+  }
+
+  pickleData() {
+    const json = super.pickleData();
+    json.money = this.money;
+    return json;
+  }
+
+  unpickleData(json) {
+    super.unpickleData(json);
+    this.money = json.money;
+  }
 }
 
 registerClass(GameObject, 10);
+registerClass(MoneyBag, 30);
 
-module.exports = GameObject;
+exports.GameObject = GameObject;
+exports.MoneyBag = MoneyBag;

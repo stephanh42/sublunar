@@ -4,7 +4,7 @@ const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
 const {registerClass, getReference} = require('./pickle.js');
 const {randomInt, randomRange, probability} = require('./randutil.js');
-const GameObject = require('./game-object.js');
+const {GameObject} = require('./game-object.js');
 const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
@@ -132,10 +132,12 @@ class Monster extends GameObject {
   unpickleData(json) {
     super.unpickleData(json);
     this.monsterType = monsterList[json.mt];
-    ({hp: this.baseHp,
+    ({
+      hp: this.baseHp,
       hpTime: this.baseHpTime,
       target: this.target = null,
-      movesLeft: this.movesLeft = Infinity} = json);
+      movesLeft: this.movesLeft = Infinity
+    } = json);
   }
 
   postLoad(world) {

@@ -1,6 +1,6 @@
 'use strict';
 
-const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
+const {loadImageSizes, HealthBarDrawer, airColors} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
 const {registerClass, getReference} = require('./pickle.js');
 const {randomInt, randomRange, probability} = require('./randutil.js');
@@ -64,6 +64,9 @@ class MonsterPathFinder extends PathFinder {
     return this.monster.isPassable(x, y);
   }
 }
+
+const hpHealthBarDrawer = new HealthBarDrawer();
+const airHealthBarDrawer = new HealthBarDrawer(airColors, true);
 
 class Monster extends GameObject {
   constructor(monsterType) {
@@ -170,19 +173,23 @@ class Monster extends GameObject {
     const img = this.monsterType.images.get(tileSize);
     drawImageDirection(ctx, img, x, y, this.direction);
     const hpFraction = this.getHp() / this.monsterType.maxHp;
+    const barWidth = tileSize >> 1;
+    const barHeight = tileSize >> 3;
     if (hpFraction < 1) {
-      const healthBarWidth = tileSize >> 1;
-      const healthBarHeight = tileSize >> 3;
-      const healthBar = healthBarDrawer.get(
-        healthBarWidth,
-        healthBarHeight,
-        hpFraction
-      );
+      const healthBar = hpHealthBarDrawer.get(barWidth, barHeight, hpFraction);
       ctx.drawImage(
         healthBar,
-        x + tileSize - healthBarWidth - 1,
-        y + tileSize - healthBarHeight - 1
+        x + tileSize - barWidth - 1,
+        y + tileSize - barHeight - 1
       );
+    }
+    if (this.isPlayer() && world.airPercentage() < 100) {
+      const airBar = airHealthBarDrawer.get(
+        barHeight,
+        barWidth,
+        world.airPercentage() / 100
+      );
+      ctx.drawImage(airBar, x + 2, y + tileSize - barWidth - 2);
     }
   }
 

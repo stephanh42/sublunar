@@ -835,6 +835,8 @@ exports.neutralColor = 'white';
 },{}],9:[function(require,module,exports){
 'use strict';
 
+const {lerp} = require('./animation.js');
+
 function loadImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -895,38 +897,57 @@ async function loadImageSizes(url) {
   return new ScaledImage(await p1, await p2);
 }
 
-function colorFromFraction(fraction) {
+function lerpColor(s, color1, color2) {
+  const [r1, g1, b1] = color1;
+  const [r2, g2, b2] = color2;
+  const r = Math.round(lerp(s, r1, r2));
+  const g = Math.round(lerp(s, g1, g2));
+  const b = Math.round(lerp(s, b1, b2));
+  return `rgb(${r}, ${g}, ${b}`;
+}
+
+const defaultColors = [[255, 0, 0], [255, 255, 0], [0, 255, 0]];
+const airColors = [[255, 0, 255], [0, 127, 255], [0, 255, 255]];
+
+function colorFromFraction(fraction, colors = defaultColors) {
   if (fraction < 0.5) {
-    return `rgb(255, ${Math.round(255 * 2 * fraction)}, 0)`;
+    return lerpColor(2 * fraction, colors[0], colors[1]);
   } else {
-    return `rgb(${Math.round(255 * 2 * (1 - fraction))}, 255, 0)`;
+    return lerpColor(2 * (fraction - 0.5), colors[1], colors[2]);
   }
 }
 
 class HealthBarDrawer {
-  constructor() {
+  constructor(colors = defaultColors, vertical = false) {
     this.width = -1;
     this.height = -1;
     this.cachedImages = new Map();
+    this.colors = colors;
+    this.vertical = vertical;
   }
 
   get(width, height, healthFraction) {
-    const barWidth = Math.round(healthFraction * (width - 2));
+    const fullBar = this.vertical ? height : width;
+    const barSize = Math.round(healthFraction * (fullBar - 2));
     if (this.width !== width || this.height !== height) {
       this.width = width;
       this.height = height;
       this.cachedImages.clear();
     }
-    let img = this.cachedImages.get(barWidth);
+    let img = this.cachedImages.get(barSize);
     if (!img) {
       img = createCanvas(width, height);
       const ctx = img.getContext('2d');
       ctx.fillStyle = '#303030';
       ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = colorFromFraction(barWidth / (width - 2));
-      ctx.fillRect(1, 1, barWidth, height - 2);
+      ctx.fillStyle = colorFromFraction(barSize / (fullBar - 2), this.colors);
+      if (this.vertical) {
+        ctx.fillRect(1, height - 2 - barSize, width - 2, barSize);
+      } else {
+        ctx.fillRect(1, 1, barSize, height - 2);
+      }
 
-      this.cachedImages.set(barWidth, img);
+      this.cachedImages.set(barSize, img);
     }
     return img;
   }
@@ -935,9 +956,10 @@ class HealthBarDrawer {
 exports.loadImage = loadImage;
 exports.loadImageSizes = loadImageSizes;
 exports.colorFromFraction = colorFromFraction;
-exports.healthBarDrawer = new HealthBarDrawer();
+exports.HealthBarDrawer = HealthBarDrawer;
+exports.airColors = airColors;
 
-},{}],10:[function(require,module,exports){
+},{"./animation.js":1}],10:[function(require,module,exports){
 'use strict';
 
 const GameViewer = require('./gameviewer.js');
@@ -958,7 +980,7 @@ exports.getYFromId = xy => (xy << 16) >> 16;
 },{}],12:[function(require,module,exports){
 'use strict';
 
-const {loadImageSizes, healthBarDrawer} = require('./imgutil.js');
+const {loadImageSizes, HealthBarDrawer, airColors} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
 const {registerClass, getReference} = require('./pickle.js');
 const {randomInt, randomRange, probability} = require('./randutil.js');
@@ -1022,6 +1044,9 @@ class MonsterPathFinder extends PathFinder {
     return this.monster.isPassable(x, y);
   }
 }
+
+const hpHealthBarDrawer = new HealthBarDrawer();
+const airHealthBarDrawer = new HealthBarDrawer(airColors, true);
 
 class Monster extends GameObject {
   constructor(monsterType) {
@@ -1128,19 +1153,23 @@ class Monster extends GameObject {
     const img = this.monsterType.images.get(tileSize);
     drawImageDirection(ctx, img, x, y, this.direction);
     const hpFraction = this.getHp() / this.monsterType.maxHp;
+    const barWidth = tileSize >> 1;
+    const barHeight = tileSize >> 3;
     if (hpFraction < 1) {
-      const healthBarWidth = tileSize >> 1;
-      const healthBarHeight = tileSize >> 3;
-      const healthBar = healthBarDrawer.get(
-        healthBarWidth,
-        healthBarHeight,
-        hpFraction
-      );
+      const healthBar = hpHealthBarDrawer.get(barWidth, barHeight, hpFraction);
       ctx.drawImage(
         healthBar,
-        x + tileSize - healthBarWidth - 1,
-        y + tileSize - healthBarHeight - 1
+        x + tileSize - barWidth - 1,
+        y + tileSize - barHeight - 1
       );
+    }
+    if (this.isPlayer() && world.airPercentage() < 100) {
+      const airBar = airHealthBarDrawer.get(
+        barHeight,
+        barWidth,
+        world.airPercentage() / 100
+      );
+      ctx.drawImage(airBar, x + 2, y + tileSize - barWidth - 2);
     }
   }
 
@@ -2086,7 +2115,7 @@ const {
   makeSpan,
   makeElement
 } = require('./htmlutil.js');
-const {colorFromFraction} = require('./imgutil.js');
+const {colorFromFraction, airColors} = require('./imgutil.js');
 
 class Message {
   constructor(message, color, hp) {
@@ -2185,7 +2214,7 @@ class StatusArea {
     this.addDiv(`Depth: ${state.depth}/${state.maxDepth}`, depthColor);
     this.addDiv(
       `Air: ${state.airPercentage}%`,
-      colorFromFraction(state.airPercentage / 100)
+      colorFromFraction(state.airPercentage / 100, airColors)
     );
     this.addDiv(`Money: ${state.money}`);
     if (state.dead) {

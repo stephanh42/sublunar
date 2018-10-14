@@ -9,7 +9,7 @@ const {
   makeSpan,
   makeElement
 } = require('./htmlutil.js');
-const {colorFromFraction} = require('./imgutil.js');
+const {colorFromFraction, airColors} = require('./imgutil.js');
 
 class Message {
   constructor(message, color, hp) {
@@ -108,7 +108,7 @@ class StatusArea {
     this.addDiv(`Depth: ${state.depth}/${state.maxDepth}`, depthColor);
     this.addDiv(
       `Air: ${state.airPercentage}%`,
-      colorFromFraction(state.airPercentage / 100)
+      colorFromFraction(state.airPercentage / 100, airColors)
     );
     this.addDiv(`Money: ${state.money}`);
     if (state.dead) {

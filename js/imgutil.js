@@ -1,5 +1,7 @@
 'use strict';
 
+const {lerp} = require('./animation.js');
+
 function loadImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -60,38 +62,57 @@ async function loadImageSizes(url) {
   return new ScaledImage(await p1, await p2);
 }
 
-function colorFromFraction(fraction) {
+function lerpColor(s, color1, color2) {
+  const [r1, g1, b1] = color1;
+  const [r2, g2, b2] = color2;
+  const r = Math.round(lerp(s, r1, r2));
+  const g = Math.round(lerp(s, g1, g2));
+  const b = Math.round(lerp(s, b1, b2));
+  return `rgb(${r}, ${g}, ${b}`;
+}
+
+const defaultColors = [[255, 0, 0], [255, 255, 0], [0, 255, 0]];
+const airColors = [[255, 0, 255], [0, 127, 255], [0, 255, 255]];
+
+function colorFromFraction(fraction, colors = defaultColors) {
   if (fraction < 0.5) {
-    return `rgb(255, ${Math.round(255 * 2 * fraction)}, 0)`;
+    return lerpColor(2 * fraction, colors[0], colors[1]);
   } else {
-    return `rgb(${Math.round(255 * 2 * (1 - fraction))}, 255, 0)`;
+    return lerpColor(2 * (fraction - 0.5), colors[1], colors[2]);
   }
 }
 
 class HealthBarDrawer {
-  constructor() {
+  constructor(colors = defaultColors, vertical = false) {
     this.width = -1;
     this.height = -1;
     this.cachedImages = new Map();
+    this.colors = colors;
+    this.vertical = vertical;
   }
 
   get(width, height, healthFraction) {
-    const barWidth = Math.round(healthFraction * (width - 2));
+    const fullBar = this.vertical ? height : width;
+    const barSize = Math.round(healthFraction * (fullBar - 2));
     if (this.width !== width || this.height !== height) {
       this.width = width;
       this.height = height;
       this.cachedImages.clear();
     }
-    let img = this.cachedImages.get(barWidth);
+    let img = this.cachedImages.get(barSize);
     if (!img) {
       img = createCanvas(width, height);
       const ctx = img.getContext('2d');
       ctx.fillStyle = '#303030';
       ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = colorFromFraction(barWidth / (width - 2));
-      ctx.fillRect(1, 1, barWidth, height - 2);
+      ctx.fillStyle = colorFromFraction(barSize / (fullBar - 2), this.colors);
+      if (this.vertical) {
+        ctx.fillRect(1, height - 2 - barSize, width - 2, barSize);
+      } else {
+        ctx.fillRect(1, 1, barSize, height - 2);
+      }
 
-      this.cachedImages.set(barWidth, img);
+      this.cachedImages.set(barSize, img);
     }
     return img;
   }
@@ -100,4 +121,5 @@ class HealthBarDrawer {
 exports.loadImage = loadImage;
 exports.loadImageSizes = loadImageSizes;
 exports.colorFromFraction = colorFromFraction;
-exports.healthBarDrawer = new HealthBarDrawer();
+exports.HealthBarDrawer = HealthBarDrawer;
+exports.airColors = airColors;

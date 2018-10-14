@@ -149,6 +149,13 @@ class GameObject {
     }
     return awaitPromises(promises);
   }
+}
+
+class TypedGameObject extends GameObject {
+  constructor(objectType) {
+    super();
+    this.objectType = objectType;
+  }
 
   pickleData() {
     const json = super.pickleData();
@@ -158,13 +165,6 @@ class GameObject {
   unpickleData(json) {
     super.unpickleData(json);
     this.objectType = objectTypeList[json.ot];
-  }
-}
-
-class TypedGameObject extends GameObject {
-  constructor(objectType) {
-    super();
-    this.objectType = objectType;
   }
 }
 

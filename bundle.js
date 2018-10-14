@@ -711,10 +711,12 @@ class GameViewer extends CanvasViewer {
 
     const px = player.x;
     const py = player.y;
+    const maxDepth = player.monsterType.maxDepth;
 
     const tileSize = this.tileSize;
     const borderSize = 2;
     const fullTileSize = tileSize + borderSize;
+    const lineDash = [1 / 8, 1 / 8].map(x => fullTileSize * x);
 
     let cx = (width - fullTileSize) >> 1;
     let cy = (height - fullTileSize) >> 1;
@@ -752,6 +754,17 @@ class GameViewer extends CanvasViewer {
             ix * fullTileSize,
             iy * fullTileSize
           );
+          if (wy === maxDepth + 1 && terrain.passable) {
+            ctx.save();
+            ctx.strokeStyle = 'rgb(255, 127, 127)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash(lineDash);
+            ctx.beginPath();
+            ctx.moveTo(ix * fullTileSize, iy * fullTileSize + 1);
+            ctx.lineTo((ix + 1) * fullTileSize, iy * fullTileSize + 1);
+            ctx.stroke();
+            ctx.restore();
+          }
           anythingShown = true;
         }
         if (isVisible) {

@@ -17,7 +17,7 @@ module.exports = [
     meleeVerb: 'rams',
     torpedoRate: 0.1,
     frequency: 5,
-    moneyDrop: {probability: 0.5, min: 1, max: 5}
+    moneyDrop: {probability: 0.8, min: 1, max: 5}
   },
   {
     name: 'squid',
@@ -25,7 +25,7 @@ module.exports = [
     maxHp: 12,
     frequency: 10,
     alive: true,
-    moneyDrop: {probability: 0.3, min: 1, max: 3}
+    moneyDrop: {probability: 0.5, min: 1, max: 3}
   },
   {
     name: 'torpedo',

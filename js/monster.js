@@ -9,7 +9,7 @@ const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
 const {toTitleCase} = require('./textutil.js');
-const {goodColor, badColor} = require('./htmlutil.js');
+const {goodColor, badColor, helpColor} = require('./htmlutil.js');
 const assert = require('./assert.js');
 
 const monsterTypes = {};
@@ -218,20 +218,14 @@ class Monster extends GameObject {
     const yold = this.y;
     const xnew = xold + dx;
     const ynew = yold + dy;
-    const oldVisible = world.isVisible(xold, yold);
-    this.basicMove(xnew, ynew);
     this.sleep(this.monsterType.baseDelay);
-    const newVisible = world.isVisible(xnew, ynew);
     this.setDirection(dx);
-    if (oldVisible || newVisible) {
-      const time = world.ui.now();
-      return world.ui.animate(
-        new animation.ObjectAnimation(
-          this,
-          new animation.State(time, xold, yold, oldVisible | 0),
-          new animation.State(time + 100, xnew, ynew, newVisible | 0)
-        )
-      );
+    await this.animateMove(xnew, ynew);
+    if (
+      this.isPlayer() &&
+      world.getGameObjects(this.x, this.y).some(obj => obj.canPickup())
+    ) {
+      world.ui.message('Press , to pick up objects.', helpColor);
     }
     this.movesLeft = this.movesLeft - 1;
     if (this.movesLeft === 0) {

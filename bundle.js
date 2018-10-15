@@ -354,6 +354,7 @@ const world = require('./world.js');
 const pqueue = require('./pqueue.js');
 const {getIdFromXY} = require('./indexutil.js');
 const {registerClass} = require('./pickle.js');
+const animation = require('./animation.js');
 const assert = require('./assert.js');
 const {loadImageSizes} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
@@ -455,6 +456,24 @@ class GameObject {
     }
   }
 
+  async animateMove(xnew, ynew) {
+    const xold = this.x;
+    const yold = this.y;
+    const oldVisible = world.isVisible(xold, yold);
+    this.basicMove(xnew, ynew);
+    const newVisible = world.isVisible(xnew, ynew);
+    if (oldVisible || newVisible) {
+      const time = world.ui.now();
+      return world.ui.animate(
+        new animation.ObjectAnimation(
+          this,
+          new animation.State(time, xold, yold, oldVisible | 0),
+          new animation.State(time + 100, xnew, ynew, newVisible | 0)
+        )
+      );
+    }
+  }
+
   updateSeen() {}
 
   schedule(deltaTime, action) {
@@ -483,6 +502,10 @@ class GameObject {
   }
 
   isBlocking() {
+    return false;
+  }
+
+  canPickup() {
     return false;
   }
 
@@ -531,11 +554,14 @@ class TypedGameObject extends GameObject {
     ctx.drawImage(img, x, y);
   }
 
-  doSink() {
+  async doSink() {
     assert(this.sinking, 'We are not sinking');
-    if (this.isPlaced && world.isPassable(this.x, this.y + 1)) {
-      this.basicMove(this.x, this.y + 1);
+    if (
+      this.isPlaced &&
+      world.isPassable(this.x, this.y + 1, this.isBlocking())
+    ) {
       this.scheduleSink();
+      return this.animateMove(this.x, this.y + 1);
     } else {
       this.sinking = false;
     }
@@ -563,6 +589,10 @@ class MoneyBag extends TypedGameObject {
     super.unpickleData(json);
     this.money = json.money;
   }
+
+  canPickup() {
+    return true;
+  }
 }
 
 registerClass(GameObject, 10);
@@ -571,7 +601,7 @@ registerClass(MoneyBag, 30);
 exports.GameObject = GameObject;
 exports.MoneyBag = MoneyBag;
 
-},{"./assert.js":2,"./imgutil.js":9,"./indexutil.js":11,"./objecttype.js":15,"./pickle.js":18,"./pqueue.js":19,"./terrain.js":22,"./world.js":26}],7:[function(require,module,exports){
+},{"./animation.js":1,"./assert.js":2,"./imgutil.js":9,"./indexutil.js":11,"./objecttype.js":15,"./pickle.js":18,"./pqueue.js":19,"./terrain.js":22,"./world.js":26}],7:[function(require,module,exports){
 'use strict';
 
 const CanvasViewer = require('./canvasviewer.js');
@@ -873,6 +903,7 @@ exports.removeAllChildren = removeAllChildren;
 exports.goodColor = '#00ff00';
 exports.badColor = '#ff0000';
 exports.neutralColor = 'white';
+exports.helpColor = '#7f7fff';
 
 },{}],9:[function(require,module,exports){
 'use strict';
@@ -1031,7 +1062,7 @@ const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
 const {toTitleCase} = require('./textutil.js');
-const {goodColor, badColor} = require('./htmlutil.js');
+const {goodColor, badColor, helpColor} = require('./htmlutil.js');
 const assert = require('./assert.js');
 
 const monsterTypes = {};
@@ -1240,20 +1271,14 @@ class Monster extends GameObject {
     const yold = this.y;
     const xnew = xold + dx;
     const ynew = yold + dy;
-    const oldVisible = world.isVisible(xold, yold);
-    this.basicMove(xnew, ynew);
     this.sleep(this.monsterType.baseDelay);
-    const newVisible = world.isVisible(xnew, ynew);
     this.setDirection(dx);
-    if (oldVisible || newVisible) {
-      const time = world.ui.now();
-      return world.ui.animate(
-        new animation.ObjectAnimation(
-          this,
-          new animation.State(time, xold, yold, oldVisible | 0),
-          new animation.State(time + 100, xnew, ynew, newVisible | 0)
-        )
-      );
+    await this.animateMove(xnew, ynew);
+    if (
+      this.isPlayer() &&
+      world.getGameObjects(this.x, this.y).some(obj => obj.canPickup())
+    ) {
+      world.ui.message('Press , to pick up objects.', helpColor);
     }
     this.movesLeft = this.movesLeft - 1;
     if (this.movesLeft === 0) {
@@ -1500,7 +1525,7 @@ module.exports = [
     meleeVerb: 'rams',
     torpedoRate: 0.1,
     frequency: 5,
-    moneyDrop: {probability: 0.5, min: 1, max: 5}
+    moneyDrop: {probability: 0.8, min: 1, max: 5}
   },
   {
     name: 'squid',
@@ -1508,7 +1533,7 @@ module.exports = [
     maxHp: 12,
     frequency: 10,
     alive: true,
-    moneyDrop: {probability: 0.3, min: 1, max: 3}
+    moneyDrop: {probability: 0.5, min: 1, max: 3}
   },
   {
     name: 'torpedo',

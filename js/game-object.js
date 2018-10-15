@@ -4,6 +4,7 @@ const world = require('./world.js');
 const pqueue = require('./pqueue.js');
 const {getIdFromXY} = require('./indexutil.js');
 const {registerClass} = require('./pickle.js');
+const animation = require('./animation.js');
 const assert = require('./assert.js');
 const {loadImageSizes} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
@@ -105,6 +106,24 @@ class GameObject {
     }
   }
 
+  async animateMove(xnew, ynew) {
+    const xold = this.x;
+    const yold = this.y;
+    const oldVisible = world.isVisible(xold, yold);
+    this.basicMove(xnew, ynew);
+    const newVisible = world.isVisible(xnew, ynew);
+    if (oldVisible || newVisible) {
+      const time = world.ui.now();
+      return world.ui.animate(
+        new animation.ObjectAnimation(
+          this,
+          new animation.State(time, xold, yold, oldVisible | 0),
+          new animation.State(time + 100, xnew, ynew, newVisible | 0)
+        )
+      );
+    }
+  }
+
   updateSeen() {}
 
   schedule(deltaTime, action) {
@@ -133,6 +152,10 @@ class GameObject {
   }
 
   isBlocking() {
+    return false;
+  }
+
+  canPickup() {
     return false;
   }
 
@@ -181,11 +204,14 @@ class TypedGameObject extends GameObject {
     ctx.drawImage(img, x, y);
   }
 
-  doSink() {
+  async doSink() {
     assert(this.sinking, 'We are not sinking');
-    if (this.isPlaced && world.isPassable(this.x, this.y + 1)) {
-      this.basicMove(this.x, this.y + 1);
+    if (
+      this.isPlaced &&
+      world.isPassable(this.x, this.y + 1, this.isBlocking())
+    ) {
       this.scheduleSink();
+      return this.animateMove(this.x, this.y + 1);
     } else {
       this.sinking = false;
     }
@@ -212,6 +238,10 @@ class MoneyBag extends TypedGameObject {
   unpickleData(json) {
     super.unpickleData(json);
     this.money = json.money;
+  }
+
+  canPickup() {
+    return true;
   }
 }
 

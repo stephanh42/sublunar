@@ -27,3 +27,4 @@ exports.removeAllChildren = removeAllChildren;
 exports.goodColor = '#00ff00';
 exports.badColor = '#ff0000';
 exports.neutralColor = 'white';
+exports.helpColor = '#7f7fff';

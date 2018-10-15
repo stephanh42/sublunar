@@ -39,7 +39,7 @@ shielded from the vacuum of outer space. Into these caverns the ancient oceans o
 the Moon were redirected. 
 
 While the remnants of the Lunarian civilization still persevere in along
-the underground coats of the ocean, most of their technology was lost. 
+the underground coasts of the ocean, most of their technology was lost. 
 Much of this technology may still be recovered from the bottom of the
 sub-lunar sea. You have been sent from Earth to by a Great Power to 
 discover lost technology, and in particular a mysterious artifact known

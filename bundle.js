@@ -507,14 +507,43 @@ class TypedGameObject extends GameObject {
     this.objectType = objectType;
   }
 
+  get sinking() {
+    return this.getFlag(4);
+  }
+
+  set sinking(flag) {
+    this.setFlag(4, flag);
+  }
+
   pickleData() {
     const json = super.pickleData();
     json.ot = this.objectType.id;
+    return json;
   }
 
   unpickleData(json) {
     super.unpickleData(json);
     this.objectType = objectTypeList[json.ot];
+  }
+
+  draw(ctx, x, y, tileSize) {
+    const img = this.objectType.images.get(tileSize);
+    ctx.drawImage(img, x, y);
+  }
+
+  doSink() {
+    assert(this.sinking, 'We are not sinking');
+    if (this.isPlaced && world.isPassable(this.x, this.y + 1)) {
+      this.basicMove(this.x, this.y + 1);
+      this.scheduleSink();
+    } else {
+      this.sinking = false;
+    }
+  }
+
+  scheduleSink() {
+    this.sinking = true;
+    this.schedule(12, 'doSink');
   }
 }
 
@@ -997,7 +1026,7 @@ const {loadImageSizes, HealthBarDrawer, airColors} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
 const {registerClass, getReference} = require('./pickle.js');
 const {randomInt, randomRange, probability} = require('./randutil.js');
-const {GameObject} = require('./game-object.js');
+const {GameObject, MoneyBag} = require('./game-object.js');
 const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
@@ -1021,6 +1050,7 @@ function makeMonsterType(id, json) {
     isBlocking: true,
     kamikaze: false,
     torpedoRate: 0,
+    moneyDrop: null,
     imageName: null,
     images: null
   };
@@ -1277,8 +1307,18 @@ class Monster extends GameObject {
             world.ui.message(`${this.titleCaseName()} ${verb}.`);
           }
         }
+        this.doDrop();
         this.basicUnplace();
       }
+    }
+  }
+
+  doDrop() {
+    const moneyDrop = this.monsterType.moneyDrop;
+    if (moneyDrop && probability(moneyDrop.probability)) {
+      const moneyBag = new MoneyBag(randomRange(moneyDrop.min, moneyDrop.max));
+      moneyBag.basicMove(this.x, this.y);
+      moneyBag.scheduleSink();
     }
   }
 
@@ -1459,14 +1499,16 @@ module.exports = [
     hpRecovery: 1 / 20,
     meleeVerb: 'rams',
     torpedoRate: 0.1,
-    frequency: 5
+    frequency: 5,
+    moneyDrop: {probability: 0.5, min: 1, max: 5}
   },
   {
     name: 'squid',
     baseDelay: 12,
     maxHp: 12,
     frequency: 10,
-    alive: true
+    alive: true,
+    moneyDrop: {probability: 0.3, min: 1, max: 3}
   },
   {
     name: 'torpedo',

@@ -157,14 +157,43 @@ class TypedGameObject extends GameObject {
     this.objectType = objectType;
   }
 
+  get sinking() {
+    return this.getFlag(4);
+  }
+
+  set sinking(flag) {
+    this.setFlag(4, flag);
+  }
+
   pickleData() {
     const json = super.pickleData();
     json.ot = this.objectType.id;
+    return json;
   }
 
   unpickleData(json) {
     super.unpickleData(json);
     this.objectType = objectTypeList[json.ot];
+  }
+
+  draw(ctx, x, y, tileSize) {
+    const img = this.objectType.images.get(tileSize);
+    ctx.drawImage(img, x, y);
+  }
+
+  doSink() {
+    assert(this.sinking, 'We are not sinking');
+    if (this.isPlaced && world.isPassable(this.x, this.y + 1)) {
+      this.basicMove(this.x, this.y + 1);
+      this.scheduleSink();
+    } else {
+      this.sinking = false;
+    }
+  }
+
+  scheduleSink() {
+    this.sinking = true;
+    this.schedule(12, 'doSink');
   }
 }
 

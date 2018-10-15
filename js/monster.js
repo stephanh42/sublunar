@@ -4,7 +4,7 @@ const {loadImageSizes, HealthBarDrawer, airColors} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
 const {registerClass, getReference} = require('./pickle.js');
 const {randomInt, randomRange, probability} = require('./randutil.js');
-const {GameObject} = require('./game-object.js');
+const {GameObject, MoneyBag} = require('./game-object.js');
 const world = require('./world.js');
 const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
@@ -28,6 +28,7 @@ function makeMonsterType(id, json) {
     isBlocking: true,
     kamikaze: false,
     torpedoRate: 0,
+    moneyDrop: null,
     imageName: null,
     images: null
   };
@@ -284,8 +285,18 @@ class Monster extends GameObject {
             world.ui.message(`${this.titleCaseName()} ${verb}.`);
           }
         }
+        this.doDrop();
         this.basicUnplace();
       }
+    }
+  }
+
+  doDrop() {
+    const moneyDrop = this.monsterType.moneyDrop;
+    if (moneyDrop && probability(moneyDrop.probability)) {
+      const moneyBag = new MoneyBag(randomRange(moneyDrop.min, moneyDrop.max));
+      moneyBag.basicMove(this.x, this.y);
+      moneyBag.scheduleSink();
     }
   }
 

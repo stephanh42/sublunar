@@ -16,14 +16,16 @@ module.exports = [
     hpRecovery: 1 / 20,
     meleeVerb: 'rams',
     torpedoRate: 0.1,
-    frequency: 5
+    frequency: 5,
+    moneyDrop: {probability: 0.5, min: 1, max: 5}
   },
   {
     name: 'squid',
     baseDelay: 12,
     maxHp: 12,
     frequency: 10,
-    alive: true
+    alive: true,
+    moneyDrop: {probability: 0.3, min: 1, max: 3}
   },
   {
     name: 'torpedo',

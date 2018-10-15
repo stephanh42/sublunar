@@ -315,7 +315,7 @@ class SelectionEventHandler extends ViewerEventHandler {
     this.ui.questionAreaMessage(message);
     this.ui.questionAreaMessage('Use direction keys to move.', 'yellow');
     this.ui.questionAreaMessage(
-      'Press Enter to select, Escape to abort.',
+      'Press Enter or Space to select, Escape to abort.',
       'yellow'
     );
   }
@@ -331,7 +331,7 @@ class SelectionEventHandler extends ViewerEventHandler {
       this.x += dx;
       this.y += dy;
       this.canvasViewer.redraw();
-    } else if (evt.key === 'Enter') {
+    } else if (evt.key === 'Enter' || evt.key === ' ') {
       this.resolve([this.x, this.y]);
     } else if (evt.key === 'Escape') {
       this.resolve(null);

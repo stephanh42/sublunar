@@ -99,14 +99,26 @@ class ActiveEventHandler extends ViewerEventHandler {
     if (direction) {
       const [dx, dy] = direction;
       canvasViewer.playerMove(dx, dy);
-    } else if (evt.key === '+') {
-      canvasViewer.tileSize = Math.min(96, canvasViewer.tileSize + 8);
-      canvasViewer.redraw();
-    } else if (evt.key === '-') {
-      canvasViewer.tileSize = Math.max(32, canvasViewer.tileSize - 8);
-      canvasViewer.redraw();
-    } else if (evt.key === 't') {
-      canvasViewer.handlePromise(() => canvasViewer.playerTorpedo());
+    } else {
+      switch (evt.key) {
+        case '+':
+          canvasViewer.tileSize = Math.min(96, canvasViewer.tileSize + 8);
+          canvasViewer.redraw();
+          break;
+
+        case '-':
+          canvasViewer.tileSize = Math.max(32, canvasViewer.tileSize - 8);
+          canvasViewer.redraw();
+          break;
+
+        case 't':
+          canvasViewer.handlePromise(() => canvasViewer.playerTorpedo());
+          break;
+
+        case ',':
+          canvasViewer.handlePromise(() => canvasViewer.playerPickup());
+          break;
+      }
     }
   }
 

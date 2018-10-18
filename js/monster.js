@@ -221,11 +221,18 @@ class Monster extends GameObject {
     this.sleep(this.monsterType.baseDelay);
     this.setDirection(dx);
     await this.animateMove(xnew, ynew);
-    if (
-      this.isPlayer() &&
-      world.getGameObjects(this.x, this.y).some(obj => obj.canPickup())
-    ) {
-      world.ui.message('Press , to pick up objects.', helpColor);
+    if (this.isPlayer()) {
+      const objectsToPickup = world
+        .getGameObjects(this.x, this.y)
+        .filter(obj => obj.canPickup());
+      if (objectsToPickup.length !== 0) {
+        if (objectsToPickup.length === 1) {
+          world.ui.message(`You see ${objectsToPickup[0].aName()} here.`);
+        } else {
+          world.ui.message(`You see ${objectsToPickup.length} objects here.`);
+        }
+        world.ui.message('Press , to pick up objects.', helpColor);
+      }
     }
     this.movesLeft = this.movesLeft - 1;
     if (this.movesLeft === 0) {

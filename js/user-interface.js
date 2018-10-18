@@ -7,7 +7,8 @@ const {
   goodColor,
   badColor,
   makeSpan,
-  makeElement
+  makeElement,
+  freshId
 } = require('./htmlutil.js');
 const {colorFromFraction, airColors} = require('./imgutil.js');
 
@@ -129,7 +130,7 @@ class UserInterface {
     this.statusArea = new StatusArea(statusArea);
     this.lastMessage = null;
     messageArea.addEventListener('click', () => this.clearMessageArea());
-    questionArea.addEventListener('click', () => this.clearQuestionArea());
+    //    questionArea.addEventListener('click', () => this.clearQuestionArea());
   }
 
   redraw() {
@@ -199,6 +200,51 @@ class UserInterface {
 
   updateStatusArea() {
     this.statusArea.update();
+  }
+
+  askMultipleChoices({question, options, acceptButton = 'OK'}) {
+    this.clearQuestionArea();
+    const form = makeElement('form');
+    form.appendChild(makeElement('div', null, question));
+    const checkboxes = [];
+    for (const option of options) {
+      const div = makeElement('div');
+      const checkbox = makeElement('input', 'checkbox');
+      checkbox.type = 'checkbox';
+      checkbox.id = freshId();
+      checkbox.checked = true;
+      checkboxes.push(checkbox);
+      const label = makeElement('label', null, option);
+      label.for = checkbox.id;
+      div.appendChild(checkbox);
+      div.appendChild(label);
+      form.appendChild(div);
+    }
+    const div = makeElement('div');
+    const button = makeElement('button', null, acceptButton);
+    button.type = 'button';
+    div.appendChild(button);
+    const cancelButton = makeElement('button', null, 'Cancel');
+    cancelButton.type = 'button';
+    div.appendChild(cancelButton);
+    form.appendChild(div);
+    this.questionArea.appendChild(form);
+
+    return new Promise(resolve => {
+      button.addEventListener('click', () => {
+        const selected = [];
+        for (let i = 0; i < checkboxes.length; i++) {
+          if (checkboxes[i].checked) {
+            selected.push(i);
+          }
+        }
+        resolve(selected);
+      });
+      cancelButton.addEventListener('click', () => resolve([]));
+    }).then(result => {
+      window.setTimeout(() => this.clearQuestionArea());
+      return result;
+    });
   }
 }
 

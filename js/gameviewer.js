@@ -110,6 +110,23 @@ class GameViewer extends CanvasViewer {
     }
   }
 
+  async playerPickup() {
+    const player = world.player;
+    const objectsToPickup = world
+      .getGameObjects(player.x, player.y)
+      .filter(obj => obj.canPickup());
+    if (objectsToPickup.length === 0) {
+      this.ui.message('Nothin to pick up');
+      return;
+    }
+    const options = objectsToPickup.map(obj => obj.aName());
+    const selected = this.ui.askMultipleChoices({
+      question: 'Pick up what?',
+      options
+    });
+    console.log(selected);
+  }
+
   async load() {
     const dbPromise = database.openDatabase();
     const p1 = terrain.loadImages();

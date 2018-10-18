@@ -8,4 +8,11 @@ function toTitleCase(str) {
   }
 }
 
+const vowels = new Set('aeiou');
+
+function aOrAn(str) {
+  return vowels.has(str[0]) ? 'an' : 'a';
+}
+
 exports.toTitleCase = toTitleCase;
+exports.aOrAn = aOrAn;

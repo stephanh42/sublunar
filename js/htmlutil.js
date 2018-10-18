@@ -5,8 +5,12 @@ function makeElement(type, className, text, color) {
   if (className) {
     span.className = className;
   }
-  span.style.color = color;
-  span.appendChild(document.createTextNode(text));
+  if (color) {
+    span.style.color = color;
+  }
+  if (text) {
+    span.appendChild(document.createTextNode(text));
+  }
   return span;
 }
 
@@ -21,9 +25,18 @@ function removeAllChildren(element) {
   }
 }
 
+let lastId = 0;
+
+function freshId() {
+  const result = 'id' + lastId;
+  lastId++;
+  return result;
+}
+
 exports.makeElement = makeElement;
 exports.makeSpan = makeSpan;
 exports.removeAllChildren = removeAllChildren;
+exports.freshId = freshId;
 exports.goodColor = '#00ff00';
 exports.badColor = '#ff0000';
 exports.neutralColor = 'white';

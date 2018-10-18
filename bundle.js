@@ -278,14 +278,26 @@ class ActiveEventHandler extends ViewerEventHandler {
     if (direction) {
       const [dx, dy] = direction;
       canvasViewer.playerMove(dx, dy);
-    } else if (evt.key === '+') {
-      canvasViewer.tileSize = Math.min(96, canvasViewer.tileSize + 8);
-      canvasViewer.redraw();
-    } else if (evt.key === '-') {
-      canvasViewer.tileSize = Math.max(32, canvasViewer.tileSize - 8);
-      canvasViewer.redraw();
-    } else if (evt.key === 't') {
-      canvasViewer.handlePromise(() => canvasViewer.playerTorpedo());
+    } else {
+      switch (evt.key) {
+        case '+':
+          canvasViewer.tileSize = Math.min(96, canvasViewer.tileSize + 8);
+          canvasViewer.redraw();
+          break;
+
+        case '-':
+          canvasViewer.tileSize = Math.max(32, canvasViewer.tileSize - 8);
+          canvasViewer.redraw();
+          break;
+
+        case 't':
+          canvasViewer.handlePromise(() => canvasViewer.playerTorpedo());
+          break;
+
+        case ',':
+          canvasViewer.handlePromise(() => canvasViewer.playerPickup());
+          break;
+      }
     }
   }
 
@@ -358,6 +370,7 @@ const animation = require('./animation.js');
 const assert = require('./assert.js');
 const {loadImageSizes} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
+const {aOrAn} = require('./textutil.js');
 
 const objectTypes = {};
 const objectTypeList = [];
@@ -571,6 +584,11 @@ class TypedGameObject extends GameObject {
     this.sinking = true;
     this.schedule(12, 'doSink');
   }
+
+  aName() {
+    const name = this.objectType.name;
+    return aOrAn(name) + ' ' + name;
+  }
 }
 
 class MoneyBag extends TypedGameObject {
@@ -593,6 +611,14 @@ class MoneyBag extends TypedGameObject {
   canPickup() {
     return true;
   }
+
+  aName() {
+    if (this.money === 1) {
+      return 'a single zorkmid';
+    } else {
+      return this.money + ' zorkmids';
+    }
+  }
 }
 
 registerClass(GameObject, 10);
@@ -601,7 +627,7 @@ registerClass(MoneyBag, 30);
 exports.GameObject = GameObject;
 exports.MoneyBag = MoneyBag;
 
-},{"./animation.js":1,"./assert.js":2,"./imgutil.js":9,"./indexutil.js":11,"./objecttype.js":15,"./pickle.js":18,"./pqueue.js":19,"./terrain.js":22,"./world.js":26}],7:[function(require,module,exports){
+},{"./animation.js":1,"./assert.js":2,"./imgutil.js":9,"./indexutil.js":11,"./objecttype.js":15,"./pickle.js":18,"./pqueue.js":19,"./terrain.js":22,"./textutil.js":24,"./world.js":26}],7:[function(require,module,exports){
 'use strict';
 
 const CanvasViewer = require('./canvasviewer.js');
@@ -712,6 +738,23 @@ class GameViewer extends CanvasViewer {
       player.doTorpedo(target);
       return this.redraw();
     }
+  }
+
+  async playerPickup() {
+    const player = world.player;
+    const objectsToPickup = world
+      .getGameObjects(player.x, player.y)
+      .filter(obj => obj.canPickup());
+    if (objectsToPickup.length === 0) {
+      this.ui.message('Nothin to pick up');
+      return;
+    }
+    const options = objectsToPickup.map(obj => obj.aName());
+    const selected = this.ui.askMultipleChoices({
+      question: 'Pick up what?',
+      options
+    });
+    console.log(selected);
   }
 
   async load() {
@@ -881,8 +924,12 @@ function makeElement(type, className, text, color) {
   if (className) {
     span.className = className;
   }
-  span.style.color = color;
-  span.appendChild(document.createTextNode(text));
+  if (color) {
+    span.style.color = color;
+  }
+  if (text) {
+    span.appendChild(document.createTextNode(text));
+  }
   return span;
 }
 
@@ -897,9 +944,18 @@ function removeAllChildren(element) {
   }
 }
 
+let lastId = 0;
+
+function freshId() {
+  const result = 'id' + lastId;
+  lastId++;
+  return result;
+}
+
 exports.makeElement = makeElement;
 exports.makeSpan = makeSpan;
 exports.removeAllChildren = removeAllChildren;
+exports.freshId = freshId;
 exports.goodColor = '#00ff00';
 exports.badColor = '#ff0000';
 exports.neutralColor = 'white';
@@ -1274,11 +1330,18 @@ class Monster extends GameObject {
     this.sleep(this.monsterType.baseDelay);
     this.setDirection(dx);
     await this.animateMove(xnew, ynew);
-    if (
-      this.isPlayer() &&
-      world.getGameObjects(this.x, this.y).some(obj => obj.canPickup())
-    ) {
-      world.ui.message('Press , to pick up objects.', helpColor);
+    if (this.isPlayer()) {
+      const objectsToPickup = world
+        .getGameObjects(this.x, this.y)
+        .filter(obj => obj.canPickup());
+      if (objectsToPickup.length !== 0) {
+        if (objectsToPickup.length === 1) {
+          world.ui.message(`You see ${objectsToPickup[0].aName()} here.`);
+        } else {
+          world.ui.message(`You see ${objectsToPickup.length} objects here.`);
+        }
+        world.ui.message('Press , to pick up objects.', helpColor);
+      }
     }
     this.movesLeft = this.movesLeft - 1;
     if (this.movesLeft === 0) {
@@ -2181,7 +2244,14 @@ function toTitleCase(str) {
   }
 }
 
+const vowels = new Set('aeiou');
+
+function aOrAn(str) {
+  return vowels.has(str[0]) ? 'an' : 'a';
+}
+
 exports.toTitleCase = toTitleCase;
+exports.aOrAn = aOrAn;
 
 },{}],25:[function(require,module,exports){
 'use strict';
@@ -2193,7 +2263,8 @@ const {
   goodColor,
   badColor,
   makeSpan,
-  makeElement
+  makeElement,
+  freshId
 } = require('./htmlutil.js');
 const {colorFromFraction, airColors} = require('./imgutil.js');
 
@@ -2315,7 +2386,7 @@ class UserInterface {
     this.statusArea = new StatusArea(statusArea);
     this.lastMessage = null;
     messageArea.addEventListener('click', () => this.clearMessageArea());
-    questionArea.addEventListener('click', () => this.clearQuestionArea());
+    //    questionArea.addEventListener('click', () => this.clearQuestionArea());
   }
 
   redraw() {
@@ -2385,6 +2456,51 @@ class UserInterface {
 
   updateStatusArea() {
     this.statusArea.update();
+  }
+
+  askMultipleChoices({question, options, acceptButton = 'OK'}) {
+    this.clearQuestionArea();
+    const form = makeElement('form');
+    form.appendChild(makeElement('div', null, question));
+    const checkboxes = [];
+    for (const option of options) {
+      const div = makeElement('div');
+      const checkbox = makeElement('input', 'checkbox');
+      checkbox.type = 'checkbox';
+      checkbox.id = freshId();
+      checkbox.checked = true;
+      checkboxes.push(checkbox);
+      const label = makeElement('label', null, option);
+      label.for = checkbox.id;
+      div.appendChild(checkbox);
+      div.appendChild(label);
+      form.appendChild(div);
+    }
+    const div = makeElement('div');
+    const button = makeElement('button', null, acceptButton);
+    button.type = 'button';
+    div.appendChild(button);
+    const cancelButton = makeElement('button', null, 'Cancel');
+    cancelButton.type = 'button';
+    div.appendChild(cancelButton);
+    form.appendChild(div);
+    this.questionArea.appendChild(form);
+
+    return new Promise(resolve => {
+      button.addEventListener('click', () => {
+        const selected = [];
+        for (let i = 0; i < checkboxes.length; i++) {
+          if (checkboxes[i].checked) {
+            selected.push(i);
+          }
+        }
+        resolve(selected);
+      });
+      cancelButton.addEventListener('click', () => resolve([]));
+    }).then(result => {
+      window.setTimeout(() => this.clearQuestionArea());
+      return result;
+    });
   }
 }
 

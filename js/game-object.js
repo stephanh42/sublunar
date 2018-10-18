@@ -8,6 +8,7 @@ const animation = require('./animation.js');
 const assert = require('./assert.js');
 const {loadImageSizes} = require('./imgutil.js');
 const {awaitPromises} = require('./terrain.js');
+const {aOrAn} = require('./textutil.js');
 
 const objectTypes = {};
 const objectTypeList = [];
@@ -221,6 +222,11 @@ class TypedGameObject extends GameObject {
     this.sinking = true;
     this.schedule(12, 'doSink');
   }
+
+  aName() {
+    const name = this.objectType.name;
+    return aOrAn(name) + ' ' + name;
+  }
 }
 
 class MoneyBag extends TypedGameObject {
@@ -242,6 +248,14 @@ class MoneyBag extends TypedGameObject {
 
   canPickup() {
     return true;
+  }
+
+  aName() {
+    if (this.money === 1) {
+      return 'a single zorkmid';
+    } else {
+      return this.money + ' zorkmids';
+    }
   }
 }
 

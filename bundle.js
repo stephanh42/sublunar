@@ -612,11 +612,16 @@ class MoneyBag extends TypedGameObject {
     return true;
   }
 
+  doPickup() {
+    world.money += this.money;
+    this.basicUnplace();
+  }
+
   aName() {
     if (this.money === 1) {
-      return 'a single zorkmid';
+      return 'a bag with a single zorkmid';
     } else {
-      return this.money + ' zorkmids';
+      return `a bag with ${this.money} zorkmids`;
     }
   }
 }
@@ -746,15 +751,19 @@ class GameViewer extends CanvasViewer {
       .getGameObjects(player.x, player.y)
       .filter(obj => obj.canPickup());
     if (objectsToPickup.length === 0) {
-      this.ui.message('Nothin to pick up');
+      this.ui.message('Nothing to pick up');
       return;
     }
     const options = objectsToPickup.map(obj => obj.aName());
-    const selected = this.ui.askMultipleChoices({
+    const selected = await this.ui.askMultipleChoices({
       question: 'Pick up what?',
       options
     });
-    console.log(selected);
+    for (const item of selected) {
+      objectsToPickup[item].doPickup();
+      this.ui.message(`You pick up ${objectsToPickup[item].aName()}.`);
+    }
+    this.ui.updateStatusArea();
   }
 
   async load() {

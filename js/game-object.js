@@ -250,11 +250,16 @@ class MoneyBag extends TypedGameObject {
     return true;
   }
 
+  doPickup() {
+    world.money += this.money;
+    this.basicUnplace();
+  }
+
   aName() {
     if (this.money === 1) {
-      return 'a single zorkmid';
+      return 'a bag with a single zorkmid';
     } else {
-      return this.money + ' zorkmids';
+      return `a bag with ${this.money} zorkmids`;
     }
   }
 }

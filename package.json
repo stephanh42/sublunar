@@ -14,7 +14,8 @@
     "lint": "eslint js/*.js",
     "prettier": "prettier --write js/*.js",
     "stage": "npm run prettier && npm run build && git add -v .",
-    "zip": "npm run build && zip -r sublunar.zip img/*.png index.html theme.css bundle.js"
+    "zip": "npm run build && zip -r sublunar.zip img/*.png index.html theme.css bundle.js",
+    "itch": "npm run zip && butler push sublunar.zip stephanh42/sublunar:win-linux-mac"
   },
   "author": "Stephan Houben",
   "license": "MIT",

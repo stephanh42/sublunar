@@ -15,9 +15,9 @@ function randomWalk(n) {
     } else {
       world.setTerrain(x, y, terrainTypes.water);
       if (world.isPassable(x, y) && Math.random() < 0.01) {
-        const monsterType = Monster.chooseMonsterType(mt => y <= mt.maxDepth);
-        if (monsterType) {
-          new Monster(monsterType).basicMove(x, y);
+        const objectType = Monster.chooseMonsterType(mt => y <= mt.maxDepth);
+        if (objectType) {
+          new Monster(objectType).basicMove(x, y);
         }
       }
     }
@@ -35,7 +35,7 @@ function randomWalk(n) {
 function newGame() {
   world.reset();
   randomWalk(1000);
-  const player = new Monster(Monster.monsterTypes.submarine);
+  const player = new Monster(Monster.objectTypes.submarine);
   world.player = player;
   player.basicMove(0, 0);
   player.schedule(0, 'checkDepth');

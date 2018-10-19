@@ -3,7 +3,6 @@
 const CanvasViewer = require('./canvasviewer.js');
 const UserInterface = require('./user-interface.js');
 const terrain = require('./terrain.js');
-const Monster = require('./monster.js');
 const {GameObject} = require('./game-object.js');
 
 const database = require('./database.js');
@@ -134,8 +133,7 @@ class GameViewer extends CanvasViewer {
   async load() {
     const dbPromise = database.openDatabase();
     const p1 = terrain.loadImages();
-    const p2 = Monster.loadImages();
-    const p3 = GameObject.loadImages();
+    const p2 = GameObject.loadImages();
     world.database = await dbPromise;
     let msg;
     if (await world.tryLoadGame()) {
@@ -147,7 +145,6 @@ class GameViewer extends CanvasViewer {
     }
     await p1;
     await p2;
-    await p3;
     this.ui.updateStatusArea();
     this.ui.clearMessageArea();
     this.ui.message(msg, 'yellow');
@@ -187,7 +184,7 @@ class GameViewer extends CanvasViewer {
 
     const px = player.x;
     const py = player.y;
-    const maxDepth = player.monsterType.maxDepth;
+    const maxDepth = player.objectType.maxDepth;
 
     const tileSize = this.tileSize;
     const borderSize = 2;

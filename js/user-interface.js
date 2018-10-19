@@ -61,10 +61,10 @@ class StatusArea {
     if (player) {
       return {
         hp: player.getHp(),
-        maxHp: player.monsterType.maxHp,
+        maxHp: player.objectType.maxHp,
         dead: player.dead,
         depth: player.y,
-        maxDepth: player.monsterType.maxDepth,
+        maxDepth: player.objectType.maxDepth,
         airPercentage: world.airPercentage(),
         money: world.money
       };

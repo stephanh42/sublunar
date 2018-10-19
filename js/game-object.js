@@ -16,6 +16,17 @@ const objectTypeList = [];
 function makeObjectType(id, json) {
   const result = {
     id: id,
+    baseDelay: 6,
+    intelligence: 10,
+    hpRecovery: 1 / 24,
+    maxDepth: Infinity,
+    frequency: 0,
+    meleeVerb: 'attacks',
+    alive: false,
+    isBlocking: true,
+    kamikaze: false,
+    torpedoRate: 0,
+    moneyDrop: null,
     imageName: null,
     images: null
   };
@@ -175,6 +186,9 @@ class GameObject {
   }
 }
 
+GameObject.objectTypes = objectTypes;
+GameObject.objectTypeList = objectTypeList;
+
 class TypedGameObject extends GameObject {
   constructor(objectType) {
     super();
@@ -267,5 +281,6 @@ class MoneyBag extends TypedGameObject {
 registerClass(GameObject, 10);
 registerClass(MoneyBag, 30);
 
+exports.TypedGameObject = TypedGameObject;
 exports.GameObject = GameObject;
 exports.MoneyBag = MoneyBag;

@@ -13,7 +13,8 @@
     "build": "browserify js/index.js > bundle.js",
     "lint": "eslint js/*.js",
     "prettier": "prettier --write js/*.js",
-    "stage": "npm run prettier && npm run build && git add -v ."
+    "stage": "npm run prettier && npm run build && git add -v .",
+    "zip": "npm run build && zip -r sublunar.zip img/*.png index.html theme.css bundle.js"
   },
   "author": "Stephan Houben",
   "license": "MIT",

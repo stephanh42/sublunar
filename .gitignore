@@ -13,6 +13,7 @@ __pycache__
 *.log
 *.dvi
 *.swp
+*.zip
 a.out
 node_modules
 tags

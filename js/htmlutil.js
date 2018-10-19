@@ -14,6 +14,12 @@ function makeElement(type, className, text, color) {
   return span;
 }
 
+function wrapTableCell(node) {
+  const tableCell = makeElement('td');
+  tableCell.appendChild(node);
+  return tableCell;
+}
+
 function makeSpan(...args) {
   return makeElement('span', ...args);
 }
@@ -35,6 +41,7 @@ function freshId() {
 
 exports.makeElement = makeElement;
 exports.makeSpan = makeSpan;
+exports.wrapTableCell = wrapTableCell;
 exports.removeAllChildren = removeAllChildren;
 exports.freshId = freshId;
 exports.goodColor = '#00ff00';

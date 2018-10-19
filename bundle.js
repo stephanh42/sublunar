@@ -954,6 +954,12 @@ function makeElement(type, className, text, color) {
   return span;
 }
 
+function wrapTableCell(node) {
+  const tableCell = makeElement('td');
+  tableCell.appendChild(node);
+  return tableCell;
+}
+
 function makeSpan(...args) {
   return makeElement('span', ...args);
 }
@@ -975,6 +981,7 @@ function freshId() {
 
 exports.makeElement = makeElement;
 exports.makeSpan = makeSpan;
+exports.wrapTableCell = wrapTableCell;
 exports.removeAllChildren = removeAllChildren;
 exports.freshId = freshId;
 exports.goodColor = '#00ff00';
@@ -2227,6 +2234,7 @@ const {
   badColor,
   makeSpan,
   makeElement,
+  wrapTableCell,
   freshId
 } = require('./htmlutil.js');
 const {colorFromFraction, airColors} = require('./imgutil.js');
@@ -2426,8 +2434,9 @@ class UserInterface {
     const form = makeElement('form');
     form.appendChild(makeElement('div', null, question));
     const checkboxes = [];
+    const table = makeElement('table');
     for (const option of options) {
-      const div = makeElement('div');
+      const tableRow = makeElement('tr');
       const checkbox = makeElement('input', 'checkbox');
       checkbox.type = 'checkbox';
       checkbox.id = freshId();
@@ -2435,10 +2444,11 @@ class UserInterface {
       checkboxes.push(checkbox);
       const label = makeElement('label', null, option);
       label.for = checkbox.id;
-      div.appendChild(checkbox);
-      div.appendChild(label);
-      form.appendChild(div);
+      tableRow.appendChild(wrapTableCell(checkbox));
+      tableRow.appendChild(wrapTableCell(label));
+      table.appendChild(tableRow);
     }
+    form.appendChild(table);
     const div = makeElement('div');
     const button = makeElement('button', null, acceptButton);
     button.type = 'button';

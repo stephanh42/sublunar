@@ -42,8 +42,11 @@ canvas {
 }
 
 .question-area, button {
-  margin: 8px 4px;
   font-size: x-large;
+}
+
+button {
+  margin: 8px 4px;
 }
 
 .checkbox {

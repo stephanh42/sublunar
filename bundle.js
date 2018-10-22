@@ -388,6 +388,7 @@ function makeObjectType(id, json) {
     isBlocking: true,
     kamikaze: false,
     torpedoRate: 0,
+    drawAngled: false,
     moneyDrop: null,
     imageName: null,
     images: null
@@ -418,6 +419,16 @@ class GameObject {
   setFlag(bit, flag) {
     const mask = 1 << bit;
     this.flags = flag ? this.flags | mask : this.flags & ~mask;
+  }
+
+  getFlags(bit, length) {
+    const mask = (1 << length) - 1;
+    return (this.flags >> bit) & mask;
+  }
+
+  setFlags(bit, length, value) {
+    const mask = (1 << length) - 1;
+    this.flags = (this.flags & ~(mask << bit)) | ((value & mask) << bit);
   }
 
   get isPlaced() {
@@ -1130,9 +1141,30 @@ gameViewer.redraw().then(console.log, console.error);
 
 const xyMask = (1 << 16) - 1;
 
-exports.getIdFromXY = (x, y) => (x << 16) | (y & xyMask);
+const angleToXY = [
+  [1, 0],
+  [1, 1],
+  [0, 1],
+  [-1, 1],
+  [-1, 0],
+  [-1, -1],
+  [0, -1],
+  [1, -1]
+];
+
+const getIdFromXY = (x, y) => (x << 16) | (y & xyMask);
+
+const idToAngle = new Map();
+for (let i = 0; i < angleToXY.length; i++) {
+  const [x, y] = angleToXY[i];
+  idToAngle.set(getIdFromXY(x, y), i);
+}
+
+exports.getIdFromXY = getIdFromXY;
 exports.getXFromId = xy => xy >> 16;
 exports.getYFromId = xy => (xy << 16) >> 16;
+exports.angleToXY = angleToXY;
+exports.getAngleFromXY = (x, y) => idToAngle.get(getIdFromXY(x, y));
 
 },{}],12:[function(require,module,exports){
 'use strict';
@@ -1146,6 +1178,7 @@ const animation = require('./animation.js');
 const PathFinder = require('./path-finder.js');
 const {toTitleCase} = require('./textutil.js');
 const {goodColor, badColor, helpColor} = require('./htmlutil.js');
+const {getAngleFromXY} = require('./indexutil.js');
 const assert = require('./assert.js');
 
 function drawImageDirection(ctx, img, x, y, direction) {
@@ -1158,6 +1191,16 @@ function drawImageDirection(ctx, img, x, y, direction) {
     ctx.drawImage(img, 0, 0);
     ctx.restore();
   }
+}
+
+function drawImageAngle(ctx, img, x, y, angle) {
+  const xc = img.width >> 1;
+  const yc = img.height >> 1;
+  ctx.save();
+  ctx.translate(x + xc, y + yc);
+  ctx.rotate(angle * (Math.PI / 4));
+  ctx.drawImage(img, -xc, -yc);
+  ctx.restore();
 }
 
 class MonsterPathFinder extends PathFinder {
@@ -1179,9 +1222,9 @@ class Monster extends TypedGameObject {
     super(objectType);
     this.baseHp = objectType ? objectType.maxHp : 0;
     this.baseHpTime = 0;
-    this.direction = randomInt(2) === 0;
     this.target = null;
     this.movesLeft = Infinity;
+    this.setDirection(randomInt(2) * 2 - 1, 0);
   }
 
   static chooseMonsterType(filter = () => true) {
@@ -1192,7 +1235,8 @@ class Monster extends TypedGameObject {
     );
     const triggerFrequency = Math.random() * totalFrequency;
     let frequency = 0;
-    for (const mt of theMonsterList) {
+    for (let i = 0; i < theMonsterList.length; i++) {
+      const mt = theMonsterList[i];
       frequency += mt.frequency;
       if (triggerFrequency < frequency) {
         return mt;
@@ -1220,6 +1264,13 @@ class Monster extends TypedGameObject {
   }
   set dead(flag) {
     this.setFlag(3, flag);
+  }
+
+  get angle() {
+    return this.getFlags(5, 3);
+  }
+  set angle(angle) {
+    this.setFlags(5, 3, angle);
   }
 
   pickleData() {
@@ -1274,7 +1325,11 @@ class Monster extends TypedGameObject {
 
   draw(ctx, x, y, tileSize) {
     const img = this.objectType.images.get(tileSize);
-    drawImageDirection(ctx, img, x, y, this.direction);
+    if (this.objectType.drawAngled) {
+      drawImageAngle(ctx, img, x, y, this.angle);
+    } else {
+      drawImageDirection(ctx, img, x, y, this.direction);
+    }
     const hpFraction = this.getHp() / this.objectType.maxHp;
     const barWidth = tileSize >> 1;
     const barHeight = tileSize >> 3;
@@ -1307,9 +1362,14 @@ class Monster extends TypedGameObject {
     }
   }
 
-  setDirection(dx) {
+  setDirection(dx, dy) {
     if (dx !== 0) {
       this.direction = dx > 0;
+      this.markDirty();
+    }
+    const angle = getAngleFromXY(dx, dy);
+    if (angle !== undefined) {
+      this.angle = angle;
       this.markDirty();
     }
   }
@@ -1321,7 +1381,7 @@ class Monster extends TypedGameObject {
     const xnew = xold + dx;
     const ynew = yold + dy;
     this.sleep(this.objectType.baseDelay);
-    this.setDirection(dx);
+    this.setDirection(dx, dy);
     await this.animateMove(xnew, ynew);
     if (this.isPlayer()) {
       const objectsToPickup = world
@@ -1344,7 +1404,7 @@ class Monster extends TypedGameObject {
 
   doTorpedo(target) {
     const torpedo = new Monster(Monster.objectTypes.torpedo);
-    this.setDirection(target.x - this.x);
+    this.setDirection(target.x - this.x, target.y - this.y);
     torpedo.direction = this.direction;
     torpedo.target = target;
     torpedo.basicMove(this.x, this.y);
@@ -1408,7 +1468,7 @@ class Monster extends TypedGameObject {
     const oldVisible = world.isVisible(this.x, this.y);
     const newVisible = world.isVisible(victim.x, victim.y);
     const hp = randomRange(1, 4);
-    this.setDirection(victim.x - this.x);
+    this.setDirection(victim.x - this.x, victim.y - this.y);
     this.sleep(this.objectType.baseDelay);
     const kamikaze = this.objectType.kamikaze;
     if (oldVisible || newVisible) {
@@ -1544,7 +1604,7 @@ registerClass(Monster, 20);
 
 module.exports = Monster;
 
-},{"./animation.js":1,"./assert.js":2,"./game-object.js":6,"./htmlutil.js":8,"./imgutil.js":9,"./path-finder.js":15,"./pickle.js":17,"./randutil.js":19,"./textutil.js":23,"./world.js":25}],13:[function(require,module,exports){
+},{"./animation.js":1,"./assert.js":2,"./game-object.js":6,"./htmlutil.js":8,"./imgutil.js":9,"./indexutil.js":11,"./path-finder.js":15,"./pickle.js":17,"./randutil.js":19,"./textutil.js":23,"./world.js":25}],13:[function(require,module,exports){
 'use strict';
 
 const {terrainTypes} = require('./terrain.js');
@@ -1632,7 +1692,8 @@ module.exports = [
     hpRecovery: 0,
     meleeVerb: 'explodes at',
     isBlocking: false,
-    kamikaze: true
+    kamikaze: true,
+    drawAngled: true
   }
 ];
 

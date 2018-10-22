@@ -26,6 +26,7 @@ function makeObjectType(id, json) {
     isBlocking: true,
     kamikaze: false,
     torpedoRate: 0,
+    drawAngled: false,
     moneyDrop: null,
     imageName: null,
     images: null
@@ -56,6 +57,16 @@ class GameObject {
   setFlag(bit, flag) {
     const mask = 1 << bit;
     this.flags = flag ? this.flags | mask : this.flags & ~mask;
+  }
+
+  getFlags(bit, length) {
+    const mask = (1 << length) - 1;
+    return (this.flags >> bit) & mask;
+  }
+
+  setFlags(bit, length, value) {
+    const mask = (1 << length) - 1;
+    this.flags = (this.flags & ~(mask << bit)) | ((value & mask) << bit);
   }
 
   get isPlaced() {

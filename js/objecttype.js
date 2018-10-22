@@ -38,6 +38,7 @@ module.exports = [
     hpRecovery: 0,
     meleeVerb: 'explodes at',
     isBlocking: false,
-    kamikaze: true
+    kamikaze: true,
+    drawAngled: true
   }
 ];

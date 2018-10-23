@@ -1228,11 +1228,17 @@ class Monster extends TypedGameObject {
   }
 
   static chooseMonsterType(filter = () => true) {
-    const theMonsterList = TypedGameObject.objectTypeList.filter(filter);
-    const totalFrequency = theMonsterList.reduce(
-      (sum, mt) => sum + mt.frequency,
-      0
-    );
+    const objectTypeList = TypedGameObject.objectTypeList;
+    const theMonsterList = [];
+    let totalFrequency = 0;
+    for (let i = 0; i < objectTypeList.length; i++) {
+      const mt = objectTypeList[i];
+      if (filter(mt)) {
+        theMonsterList.push(mt);
+        totalFrequency += mt.frequency;
+      }
+    }
+
     const triggerFrequency = Math.random() * totalFrequency;
     let frequency = 0;
     for (let i = 0; i < theMonsterList.length; i++) {
@@ -1866,7 +1872,9 @@ class Beam {
       previousRay = this.rays[this.rays.length - 1];
       previousS = previousRay.atPoint(x, y);
     }
-    for (const ray of this.rays) {
+    const rays = this.rays;
+    for (let i = 0; i < rays.length; i++) {
+      const ray = rays[i];
       const s = ray.atPoint(x, y);
       if (
         previousRay &&
@@ -2572,6 +2580,35 @@ function unpickleWithLocation(x, y, obj) {
 
 const gameVersion = 10;
 
+function processTrees(trees, t, distance, px, py, world, visible) {
+  for (let i = 0; i < trees.length; i++) {
+    const tree = trees[i];
+    if (tree.distance > distance) {
+      continue;
+    }
+    let x = tree.x;
+    let y = tree.y;
+    if (t & 1) {
+      x = -x;
+    }
+    if (t & 2) {
+      y = -y;
+    }
+    if (t & 4) {
+      const tmp = x;
+      x = y;
+      y = tmp;
+    }
+    x += px;
+    y += py;
+    visible.add(getIdFromXY(x, y));
+    world.updateSeen(x, y);
+    if (world.getTerrain(x, y).transparent) {
+      processTrees(tree.children(), t, distance, px, py, world, visible);
+    }
+  }
+}
+
 class World {
   constructor() {
     this.terrainGrid = null;
@@ -2619,8 +2656,9 @@ class World {
 
   updateSeen(x, y) {
     this.rememberedTerrainGrid.set(x, y, this.terrainGrid.get(x, y));
-    for (const gameObject of this.getGameObjects(x, y)) {
-      gameObject.updateSeen();
+    const gameObjects = this.getGameObjects(x, y);
+    for (let i = 0; i < gameObjects.length; i++) {
+      gameObjects[i].updateSeen();
     }
   }
 
@@ -2639,36 +2677,8 @@ class World {
     visible.add(getIdFromXY(px, py));
     world.updateSeen(px, py);
 
-    function processTrees(trees, t) {
-      for (const tree of trees) {
-        if (tree.distance > distance) {
-          continue;
-        }
-        let x = tree.x;
-        let y = tree.y;
-        if (t & 1) {
-          x = -x;
-        }
-        if (t & 2) {
-          y = -y;
-        }
-        if (t & 4) {
-          const tmp = x;
-          x = y;
-          y = tmp;
-        }
-        x += px;
-        y += py;
-        visible.add(getIdFromXY(x, y));
-        world.updateSeen(x, y);
-        if (world.getTerrain(x, y).transparent) {
-          processTrees(tree.children(), t);
-        }
-      }
-    }
-
     for (let t = 0; t < 8; t++) {
-      processTrees(fovTree, t);
+      processTrees(fovTree, t, distance, px, py, world, visible);
     }
   }
 
@@ -2724,8 +2734,9 @@ class World {
       return false;
     }
     if (isBlocking) {
-      for (const gameObject of this.getGameObjects(x, y)) {
-        if (gameObject.isBlocking()) {
+      const gameObjects = this.getGameObjects(x, y);
+      for (let i = 0; i < gameObjects.length; i++) {
+        if (gameObjects[i].isBlocking()) {
           return false;
         }
       }
@@ -2834,8 +2845,8 @@ class World {
     this.airDuration = json.airDuration;
     this.money = json.money;
     for (const [, ar] of this.gameObjects) {
-      for (const gameObject of ar) {
-        gameObject.postLoad(this);
+      for (let i = 0; i < ar.length; i++) {
+        ar[i].postLoad(this);
       }
     }
   }

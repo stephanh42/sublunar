@@ -59,11 +59,17 @@ class Monster extends TypedGameObject {
   }
 
   static chooseMonsterType(filter = () => true) {
-    const theMonsterList = TypedGameObject.objectTypeList.filter(filter);
-    const totalFrequency = theMonsterList.reduce(
-      (sum, mt) => sum + mt.frequency,
-      0
-    );
+    const objectTypeList = TypedGameObject.objectTypeList;
+    const theMonsterList = [];
+    let totalFrequency = 0;
+    for (let i = 0; i < objectTypeList.length; i++) {
+      const mt = objectTypeList[i];
+      if (filter(mt)) {
+        theMonsterList.push(mt);
+        totalFrequency += mt.frequency;
+      }
+    }
+
     const triggerFrequency = Math.random() * totalFrequency;
     let frequency = 0;
     for (let i = 0; i < theMonsterList.length; i++) {

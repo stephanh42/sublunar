@@ -45,7 +45,9 @@ class Beam {
       previousRay = this.rays[this.rays.length - 1];
       previousS = previousRay.atPoint(x, y);
     }
-    for (const ray of this.rays) {
+    const rays = this.rays;
+    for (let i = 0; i < rays.length; i++) {
+      const ray = rays[i];
       const s = ray.atPoint(x, y);
       if (
         previousRay &&

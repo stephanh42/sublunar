@@ -261,6 +261,28 @@ class ViewerEventHandler extends BlockedEventHandler {
   }
 }
 
+class KeyboardEventHandler extends BlockedEventHandler {
+  constructor() {
+    super();
+    this.keyEvents = new Map();
+  }
+
+  isActive() {
+    return true;
+  }
+
+  setKeyEvent(key, action) {
+    this.keyEvents.set(key, action);
+  }
+
+  onkeydown(evt) {
+    const action = this.keyEvents.get(evt.key);
+    if (action) {
+      action(evt);
+    }
+  }
+}
+
 /* Event handler which processes user commands. */
 class ActiveEventHandler extends ViewerEventHandler {
   getSelected() {
@@ -358,6 +380,7 @@ class SelectionEventHandler extends ViewerEventHandler {
 exports.blockedEventHandler = new BlockedEventHandler();
 exports.ActiveEventHandler = ActiveEventHandler;
 exports.SelectionEventHandler = SelectionEventHandler;
+exports.KeyboardEventHandler = KeyboardEventHandler;
 
 },{"./world.js":25}],6:[function(require,module,exports){
 'use strict';
@@ -967,7 +990,9 @@ function makeElement(type, className, text, color) {
 
 function wrapTableCell(node) {
   const tableCell = makeElement('td');
-  tableCell.appendChild(node);
+  if (node) {
+    tableCell.appendChild(node);
+  }
   return tableCell;
 }
 
@@ -2296,7 +2321,10 @@ exports.aOrAn = aOrAn;
 'use strict';
 
 const world = require('./world.js');
-const {SelectionEventHandler} = require('./event-handler.js');
+const {
+  SelectionEventHandler,
+  KeyboardEventHandler
+} = require('./event-handler.js');
 const {
   removeAllChildren,
   goodColor,
@@ -2498,13 +2526,15 @@ class UserInterface {
     this.statusArea.update();
   }
 
-  askMultipleChoices({question, options, acceptButton = 'OK'}) {
+  async askMultipleChoices({question, options, acceptButton = 'OK'}) {
     this.clearQuestionArea();
     const form = makeElement('form');
     form.appendChild(makeElement('div', null, question));
     const checkboxes = [];
+    const eventHandler = new KeyboardEventHandler();
     const table = makeElement('table');
-    for (const option of options) {
+    for (let i = 0; i < options.length; i++) {
+      const option = options[i];
       const tableRow = makeElement('tr');
       const checkbox = makeElement('input', 'checkbox');
       checkbox.type = 'checkbox';
@@ -2514,6 +2544,17 @@ class UserInterface {
       const label = makeElement('label', null, option);
       label.for = checkbox.id;
       tableRow.appendChild(wrapTableCell(checkbox));
+      if (i < 26) {
+        const key = String.fromCodePoint('a'.codePointAt(0) + i);
+        const keyLabel = makeElement('label', null, `[${key}]`, 'yellow');
+        keyLabel.for = checkbox.id;
+        tableRow.appendChild(wrapTableCell(keyLabel));
+        eventHandler.setKeyEvent(key, () => {
+          checkbox.checked = !checkbox.checked;
+        });
+      } else {
+        tableRow.appendChild(wrapTableCell());
+      }
       tableRow.appendChild(wrapTableCell(label));
       table.appendChild(tableRow);
     }
@@ -2528,21 +2569,30 @@ class UserInterface {
     form.appendChild(div);
     this.questionArea.appendChild(form);
 
-    return new Promise(resolve => {
-      button.addEventListener('click', () => {
-        const selected = [];
-        for (let i = 0; i < checkboxes.length; i++) {
-          if (checkboxes[i].checked) {
-            selected.push(i);
+    try {
+      this.gameViewer.eventHandlers.push(eventHandler);
+      const result = await new Promise(resolve => {
+        const okAction = () => {
+          const selected = [];
+          for (let i = 0; i < checkboxes.length; i++) {
+            if (checkboxes[i].checked) {
+              selected.push(i);
+            }
           }
-        }
-        resolve(selected);
+          resolve(selected);
+        };
+        const cancelAction = () => resolve([]);
+        eventHandler.setKeyEvent('Enter', okAction);
+        eventHandler.setKeyEvent('Escape', cancelAction);
+
+        button.addEventListener('click', okAction);
+        cancelButton.addEventListener('click', cancelAction);
       });
-      cancelButton.addEventListener('click', () => resolve([]));
-    }).then(result => {
-      window.setTimeout(() => this.clearQuestionArea());
       return result;
-    });
+    } finally {
+      this.gameViewer.eventHandlers.pop();
+      this.clearQuestionArea();
+    }
   }
 }
 

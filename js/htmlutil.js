@@ -16,7 +16,9 @@ function makeElement(type, className, text, color) {
 
 function wrapTableCell(node) {
   const tableCell = makeElement('td');
-  tableCell.appendChild(node);
+  if (node) {
+    tableCell.appendChild(node);
+  }
   return tableCell;
 }
 

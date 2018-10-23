@@ -82,6 +82,28 @@ class ViewerEventHandler extends BlockedEventHandler {
   }
 }
 
+class KeyboardEventHandler extends BlockedEventHandler {
+  constructor() {
+    super();
+    this.keyEvents = new Map();
+  }
+
+  isActive() {
+    return true;
+  }
+
+  setKeyEvent(key, action) {
+    this.keyEvents.set(key, action);
+  }
+
+  onkeydown(evt) {
+    const action = this.keyEvents.get(evt.key);
+    if (action) {
+      action(evt);
+    }
+  }
+}
+
 /* Event handler which processes user commands. */
 class ActiveEventHandler extends ViewerEventHandler {
   getSelected() {
@@ -179,3 +201,4 @@ class SelectionEventHandler extends ViewerEventHandler {
 exports.blockedEventHandler = new BlockedEventHandler();
 exports.ActiveEventHandler = ActiveEventHandler;
 exports.SelectionEventHandler = SelectionEventHandler;
+exports.KeyboardEventHandler = KeyboardEventHandler;

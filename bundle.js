@@ -180,6 +180,7 @@ exports.openDatabase = openDatabase;
 'use strict';
 
 const world = require('./world.js');
+const {helpColor} = require('./htmlutil.js');
 
 const keyToDirection = {
   h: [-1, 0],
@@ -319,6 +320,10 @@ class ActiveEventHandler extends ViewerEventHandler {
         case ',':
           canvasViewer.handlePromise(() => canvasViewer.playerPickup());
           break;
+
+        case '?':
+          canvasViewer.ui.openHelp();
+          break;
       }
     }
   }
@@ -382,7 +387,7 @@ exports.ActiveEventHandler = ActiveEventHandler;
 exports.SelectionEventHandler = SelectionEventHandler;
 exports.KeyboardEventHandler = KeyboardEventHandler;
 
-},{"./world.js":25}],6:[function(require,module,exports){
+},{"./htmlutil.js":8,"./world.js":25}],6:[function(require,module,exports){
 'use strict';
 
 const world = require('./world.js');
@@ -692,7 +697,7 @@ const {GameObject} = require('./game-object.js');
 const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
-const {badColor} = require('./htmlutil.js');
+const {badColor, helpColor} = require('./htmlutil.js');
 const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
 const assert = require('./assert.js');
 
@@ -832,6 +837,7 @@ class GameViewer extends CanvasViewer {
     this.ui.updateStatusArea();
     this.ui.clearMessageArea();
     this.ui.message(msg, 'yellow');
+    this.ui.message('Press ? for help.', helpColor);
   }
 
   drawSelection(ctx, x, y) {
@@ -2455,6 +2461,10 @@ class UserInterface {
     this.lastMessage = null;
     messageArea.addEventListener('click', () => this.clearMessageArea());
     //    questionArea.addEventListener('click', () => this.clearQuestionArea());
+  }
+
+  openHelp() {
+    window.open('./help.html', 'SublunarHelpPage');
   }
 
   redraw() {

@@ -1,6 +1,7 @@
 'use strict';
 
 const world = require('./world.js');
+const {helpColor} = require('./htmlutil.js');
 
 const keyToDirection = {
   h: [-1, 0],
@@ -139,6 +140,10 @@ class ActiveEventHandler extends ViewerEventHandler {
 
         case ',':
           canvasViewer.handlePromise(() => canvasViewer.playerPickup());
+          break;
+
+        case '?':
+          canvasViewer.ui.openHelp();
           break;
       }
     }

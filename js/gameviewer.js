@@ -8,7 +8,7 @@ const {GameObject} = require('./game-object.js');
 const database = require('./database.js');
 const world = require('./world.js');
 const newgame = require('./newgame.js');
-const {badColor} = require('./htmlutil.js');
+const {badColor, helpColor} = require('./htmlutil.js');
 const {ActiveEventHandler, blockedEventHandler} = require('./event-handler.js');
 const assert = require('./assert.js');
 
@@ -148,6 +148,7 @@ class GameViewer extends CanvasViewer {
     this.ui.updateStatusArea();
     this.ui.clearMessageArea();
     this.ui.message(msg, 'yellow');
+    this.ui.message('Press ? for help.', helpColor);
   }
 
   drawSelection(ctx, x, y) {

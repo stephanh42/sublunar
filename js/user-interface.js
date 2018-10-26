@@ -137,6 +137,10 @@ class UserInterface {
     //    questionArea.addEventListener('click', () => this.clearQuestionArea());
   }
 
+  openHelp() {
+    window.open('./help.html', 'SublunarHelpPage');
+  }
+
   redraw() {
     return this.gameViewer.redraw();
   }
